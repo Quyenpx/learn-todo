@@ -1,0 +1,7 @@
+# Bỏ qua file tạm, log và cấu hình riêng của trình soạn thảo để kho mã gọn gàng
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
