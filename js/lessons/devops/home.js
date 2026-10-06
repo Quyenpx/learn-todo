@@ -63,12 +63,12 @@
         <section class="reveal">
           <h2>📚 Lộ trình 10 bài + dự án tổng kết</h2>
           <div class="cards">${ROADMAP.map((r, i) => {
-            const l = App.lessons.find((x) => x.id === r.id);
-            if (!l) return `<div class="lesson-card soon"><span class="ic">${r.icon}</span><h3>${r.id === 'devops-final' ? '' : `Bài ${i + 1}. `}${r.title}</h3><p>${r.text}</p><span class="tag-soon">⏳ Sắp ra mắt</span></div>`;
-            const p = App.lessonProgress(l);
-            return `<a class="lesson-card" href="${App.url(l)}" id="dv-card-${l.id}"><span class="ic">${r.icon}</span><h3>Bài ${i + 1}. ${r.title}</h3><p>${r.text}</p>
+        const l = App.lessons.find((x) => x.id === r.id);
+        if (!l) return `<div class="lesson-card soon"><span class="ic">${r.icon}</span><h3>${r.id === 'devops-final' ? '' : `Bài ${i + 1}. `}${r.title}</h3><p>${r.text}</p><span class="tag-soon">⏳ Sắp ra mắt</span></div>`;
+        const p = App.lessonProgress(l);
+        return `<a class="lesson-card" href="${App.url(l)}" id="dv-card-${l.id}"><span class="ic">${r.icon}</span><h3>${r.id === 'devops-final' ? '' : `Bài ${i + 1}. `}${r.title}</h3><p>${r.text}</p>
               <div class="meta"><span>${l.labs.length} lab · ${l.quiz.length} câu hỏi</span><span>${Math.round(p * 100)}%</span></div><div class="bar"><span style="width:${p * 100}%"></span></div></a>`;
-          }).join('')}</div>
+      }).join('')}</div>
         </section>
 
         <section class="card reveal" id="dv-setup">

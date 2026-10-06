@@ -297,10 +297,196 @@
     });
   };
 
+  // ---------- Sơ đồ cluster Kubernetes: Ingress → Service → Pod trên từng node ----------
+  // Màu Pod theo trạng thái; dải màu bên trái theo nhãn app để phân biệt các Deployment khác nhau
+  const K8S_COL = { ok: '#34d399', wait: '#fbbf24', boot: '#38bdf8', bad: '#f87171', gone: '#64748b' };
+  const podCol = (v) => {
+    if (v.status === 'Terminating' || v.status === 'Completed') return 'gone';
+    if (/Err|BackOff|OOM|Error|ConfigError/.test(v.status)) return 'bad';
+    if (v.status === 'Running') return v.ready ? 'ok' : 'wait';
+    return 'boot';
+  };
+  const appHue = (s) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+  App.k8sDiagram = function (cv, engine, t = 0) {
+    const { ctx, w, h } = cv;
+    ctx.clearRect(0, 0, w, h);
+    ctx.textBaseline = 'middle';
+    const narrow = w < 520;
+    const ns = engine.state.ns;
+    const deps = engine.list('Deployment');
+    const stss = engine.list('StatefulSet');
+    const jobs = engine.list('Job');
+    const hpas = engine.list('HorizontalPodAutoscaler');
+    const svcs = engine.list('Service').filter((s) => s.metadata.name !== 'kubernetes');
+    const ings = engine.list('Ingress', null);
+    const pods = engine.list('Pod').filter((p) => !p.sim.system);
+    const label = (txt, x, y) => { ctx.font = '600 10.5px "Be Vietnam Pro", sans-serif'; ctx.fillStyle = 'rgba(154,164,189,0.85)'; ctx.fillText(txt, x, y); };
+    // Hình trụ nhỏ tượng trưng ổ đĩa PVC
+    const cyl = (x, y, cw, ch, col) => {
+      ctx.strokeStyle = col; ctx.fillStyle = col + '33'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.ellipse(x + cw / 2, y + 2, cw / 2, 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, y + 2); ctx.lineTo(x, y + ch - 2); ctx.ellipse(x + cw / 2, y + ch - 2, cw / 2, 2, 0, Math.PI, 0, true); ctx.lineTo(x + cw, y + 2); ctx.fill(); ctx.stroke();
+    };
+
+    // Cột trái (màn rộng): Deployment, StatefulSet, Job (+ HPA, Helm) — "mong muốn" so với "thực tế"
+    const leftW = narrow ? 0 : Math.min(220, w * 0.26);
+    let y = 8;
+    if (!narrow) {
+      ctx.font = '600 10.5px "Be Vietnam Pro", sans-serif';
+      label(fit(ctx, 'WORKLOAD (mong muốn → thực tế)', leftW - 12), 8, 12);
+      y = 26;
+      const items = [...deps.map((o) => ({ k: 'deploy', o })), ...stss.map((o) => ({ k: 'sts', o })), ...jobs.map((o) => ({ k: 'job', o }))];
+      const maxItems = Math.max(1, Math.floor((h - 30) / 56));
+      items.slice(0, maxItems).forEach(({ k, o: d }) => {
+        const c0 = d.spec.template.spec.containers[0];
+        const rel = (d.metadata.annotations || {})['meta.helm.sh/release-name'];
+        let ready, desired, okAll, sub;
+        if (k === 'deploy') { const v = engine.depView(d); ready = v.ready; desired = v.desired; okAll = v.ready === v.desired && v.total === v.desired; const rev = d.metadata.annotations['deployment.kubernetes.io/revision']; sub = `${c0.image}${rev ? ' · rev ' + rev : ''}`; }
+        else if (k === 'sts') { const v = engine.stsView(d); ready = v.ready; desired = v.desired; okAll = v.ready === v.desired && v.total === v.desired; const n = (d.spec.volumeClaimTemplates || []).length ? engine.list('PersistentVolumeClaim').filter((c) => (d.spec.volumeClaimTemplates || []).some((t) => c.metadata.name.startsWith(`${t.metadata.name}-${d.metadata.name}-`))).length : 0; sub = `sts · ${c0.image}${n ? ` · PVC×${n}` : ''}`; }
+        else { const v = engine.jobView(d); ready = v.succeeded; desired = v.completions; okAll = v.status === 'Complete'; sub = `job · ${v.status} · ${c0.image}`; }
+        const hpa = k === 'deploy' && hpas.find((x) => x.spec.scaleTargetRef.name === d.metadata.name);
+        const bh = hpa ? 66 : 48;
+        const bad = k === 'job' && engine.jobView(d).status === 'Failed';
+        App.rrect(ctx, 6, y, leftW - 12, bh, 9, 'rgba(50,108,229,0.10)', bad ? 'rgba(248,113,113,0.6)' : okAll ? 'rgba(50,108,229,0.45)' : 'rgba(251,191,36,0.55)');
+        ctx.fillStyle = `hsl(${appHue((d.spec.template.metadata.labels || {}).app || d.metadata.name)},70%,62%)`;
+        ctx.fillRect(6, y + 8, 3, bh - 16);
+        ctx.fillStyle = '#e8eefc'; ctx.font = '700 12px "Be Vietnam Pro", sans-serif';
+        ctx.fillText(fit(ctx, `${rel ? '⛵ ' : ''}${d.metadata.name}`, leftW - 80), 16, y + 14);
+        ctx.textAlign = 'right'; ctx.fillStyle = bad ? '#fca5a5' : okAll ? '#86efac' : '#fde68a'; ctx.font = '700 12px "JetBrains Mono", monospace';
+        ctx.fillText(`${ready}/${desired}`, leftW - 14, y + 14); ctx.textAlign = 'left';
+        ctx.fillStyle = '#94a3b8'; ctx.font = '10.5px "JetBrains Mono", monospace';
+        ctx.fillText(fit(ctx, sub, leftW - 30), 16, y + 32);
+        if (hpa) {
+          const m = hpa.sim.m || {};
+          const util = m.util === undefined ? null : m.util;
+          ctx.fillStyle = '#c4b5fd'; ctx.fillText(fit(ctx, `HPA ${hpa.spec.minReplicas || 1}–${hpa.spec.maxReplicas} · CPU ${util === null ? '?' : util + '%'}/${m.target || '?'}%`, leftW - 30), 16, y + 50);
+          // Thanh tải CPU so với ngưỡng
+          if (util !== null) { const bw = leftW - 32, f = Math.min(1, util / Math.max(1, (m.target || 50) * 2)); App.rrect(ctx, 16, y + 58, bw, 4, 2, 'rgba(255,255,255,0.06)'); App.rrect(ctx, 16, y + 58, Math.max(3, bw * f), 4, 2, util > (m.target || 50) ? '#f87171' : '#a78bfa'); }
+        }
+        y += bh + 8;
+      });
+      if (items.length > maxItems) { ctx.fillStyle = '#94a3b8'; ctx.font = '10.5px "Be Vietnam Pro"'; ctx.fillText(`+${items.length - maxItems} workload khác`, 10, y + 4); }
+      if (!items.length) { ctx.fillStyle = '#64748b'; ctx.font = '11.5px "Be Vietnam Pro"'; ctx.fillText('Chưa có Deployment', 10, 40); }
+    }
+
+    const x0 = leftW ? leftW + 14 : 6, aw = w - x0 - 6;
+    let ry = 8;
+    // Hàng Ingress
+    const ingPos = {};
+    if (ings.length) {
+      label('INGRESS (cổng vào từ bên ngoài, :80)', x0, ry + 4);
+      ry += 14;
+      const iw = Math.min(260, (aw - 8 * (ings.length - 1)) / ings.length);
+      ings.forEach((ing, i) => {
+        const ix = x0 + i * (iw + 8);
+        App.rrect(ctx, ix, ry, iw, 26, 13, 'rgba(244,114,182,0.10)', 'rgba(244,114,182,0.5)');
+        const hosts = (ing.spec.rules || []).map((r) => r.host || '*').join(', ');
+        ctx.fillStyle = '#fbcfe8'; ctx.font = '600 11px "JetBrains Mono", monospace';
+        ctx.fillText(fit(ctx, `${ing.metadata.name} · ${hosts}`, iw - 18), ix + 10, ry + 13);
+        ingPos[ing.metadata.name] = { x: ix + iw / 2, y: ry + 26, ing };
+      });
+      ry += 40;
+    }
+    // Hàng Service
+    const svcPos = {};
+    label(narrow ? 'SERVICE' : 'SERVICE (địa chỉ ổn định, chia tải cho Pod sẵn sàng)', x0, ry + 4);
+    ry += 14;
+    if (svcs.length) {
+      const sw = Math.min(230, (aw - 8 * (svcs.length - 1)) / svcs.length);
+      svcs.slice(0, 6).forEach((s, i) => {
+        const sx = x0 + i * (sw + 8);
+        const eps = engine.endpoints(s).length;
+        App.rrect(ctx, sx, ry, sw, 30, 15, 'rgba(45,212,191,0.10)', eps ? 'rgba(45,212,191,0.55)' : 'rgba(248,113,113,0.55)');
+        ctx.fillStyle = '#ccfbf1'; ctx.font = '700 11.5px "JetBrains Mono", monospace';
+        const np = s.spec.type === 'NodePort' ? ` :${s.spec.ports[0].nodePort}` : '';
+        ctx.fillText(fit(ctx, `${s.metadata.name}${np}`, sw - 56), sx + 12, ry + 15);
+        ctx.textAlign = 'right'; ctx.font = '10.5px "JetBrains Mono", monospace'; ctx.fillStyle = eps ? '#5eead4' : '#fca5a5';
+        ctx.fillText(`${eps} ep`, sx + sw - 10, ry + 15); ctx.textAlign = 'left';
+        svcPos[s.metadata.name] = { x: sx + sw / 2, top: ry, y: ry + 30, s };
+      });
+      // Ingress → Service
+      Object.values(ingPos).forEach((ip) => (ip.ing.spec.rules || []).forEach((r) => ((r.http || {}).paths || []).forEach((pp) => {
+        const sp = svcPos[pp.backend && pp.backend.service && pp.backend.service.name];
+        if (!sp) return;
+        ctx.strokeStyle = 'rgba(244,114,182,0.45)'; ctx.lineWidth = 1.3;
+        ctx.beginPath(); ctx.moveTo(ip.x, ip.y); ctx.bezierCurveTo(ip.x, ip.y + 10, sp.x, sp.top - 10, sp.x, sp.top); ctx.stroke();
+      })));
+    } else { ctx.fillStyle = '#64748b'; ctx.font = '11.5px "Be Vietnam Pro"'; ctx.fillText('Chưa có Service — thử kubectl expose', x0 + 2, ry + 14); }
+    ry += 46;
+
+    // Node: control-plane hẹp (chỉ chạy Pod hệ thống) + 2 worker
+    const nodes = engine.list('Node');
+    const cpW = narrow ? 0 : Math.min(120, aw * 0.16);
+    const workers = nodes.filter((n) => n.sim.role !== 'control-plane');
+    const ww = (aw - cpW - (cpW ? 10 : 0) - 10 * (workers.length - 1)) / workers.length;
+    const nh = h - ry - 6;
+    const podPos = {};
+    if (cpW) {
+      ctx.setLineDash([5, 4]); App.rrect(ctx, x0, ry, cpW, nh, 12, 'rgba(255,255,255,0.02)', 'rgba(148,163,184,0.3)'); ctx.setLineDash([]);
+      ctx.fillStyle = '#94a3b8'; ctx.font = '600 10.5px "JetBrains Mono", monospace';
+      ctx.fillText(fit(ctx, 'control-plane', cpW - 14), x0 + 8, ry + 13);
+      ctx.font = '10.5px "Be Vietnam Pro"'; ctx.fillStyle = '#64748b';
+      ['apiserver', 'etcd', 'scheduler', 'controller', 'coredns ×2'].forEach((s, i) => ctx.fillText(fit(ctx, '· ' + s, cpW - 14), x0 + 8, ry + 32 + i * 16));
+    }
+    workers.forEach((n, wi) => {
+      const nx = x0 + cpW + (cpW ? 10 : 0) + wi * (ww + 10);
+      ctx.setLineDash([5, 4]); App.rrect(ctx, nx, ry, ww, nh, 12, 'rgba(50,108,229,0.04)', 'rgba(50,108,229,0.4)'); ctx.setLineDash([]);
+      ctx.fillStyle = '#93c5fd'; ctx.font = '600 10.5px "JetBrains Mono", monospace';
+      ctx.fillText(`node: ${n.metadata.name}`, nx + 8, ry + 13);
+      const mine = pods.filter((p) => p.sim.node === n.metadata.name);
+      const cols = ww > 330 ? 2 : 1, cw = (ww - 16 - (cols - 1) * 8) / cols, ch = 38;
+      const maxRows = Math.max(1, Math.floor((nh - 28) / (ch + 6)));
+      mine.slice(0, cols * maxRows).forEach((p, i) => {
+        const v = engine.podView(p);
+        const c = podCol(v);
+        const px = nx + 8 + (i % cols) * (cw + 8), py = ry + 24 + Math.floor(i / cols) * (ch + 6);
+        ctx.globalAlpha = c === 'gone' ? 0.55 : 1;
+        App.rrect(ctx, px, py, cw, ch, 8, c === 'ok' ? 'rgba(52,211,153,0.08)' : c === 'bad' ? 'rgba(248,113,113,0.09)' : 'rgba(255,255,255,0.03)', K8S_COL[c] + '88');
+        ctx.fillStyle = `hsl(${appHue(p.metadata.labels.app || p.metadata.labels.run || p.metadata.name)},70%,62%)`;
+        ctx.fillRect(px, py + 6, 3, ch - 12);
+        const pulse = c === 'ok' ? 3.2 + Math.sin(t / 320 + i) * 1.1 : 3.2;
+        App.dot(ctx, px + 13, py + 12, pulse, K8S_COL[c]);
+        ctx.fillStyle = '#f1f5f9'; ctx.font = '600 11px "JetBrains Mono", monospace';
+        const hasPvc = (p.spec.volumes || []).some((x) => x.persistentVolumeClaim);
+        ctx.fillText(fit(ctx, p.metadata.name, cw - (hasPvc ? 44 : 30)), px + 22, py + 12);
+        if (hasPvc) cyl(px + cw - 16, py + 5, 10, 14, '#c084fc');
+        ctx.fillStyle = K8S_COL[c]; ctx.font = '10.5px "JetBrains Mono", monospace';
+        const tag = (p.spec.containers[0].image || '').split('/').pop();
+        ctx.fillText(fit(ctx, `${v.status}${v.restarts ? ' ↻' + v.restarts : ''} · ${tag}`, cw - 16), px + 9, py + 28);
+        ctx.globalAlpha = 1;
+        podPos[p.metadata.name] = { x: px + cw / 2, y: py };
+      });
+      if (mine.length > cols * maxRows) { ctx.fillStyle = '#94a3b8'; ctx.font = '10.5px "Be Vietnam Pro"'; ctx.fillText(`+${mine.length - cols * maxRows} Pod khác`, nx + 10, ry + nh - 10); }
+    });
+    if (!pods.length) { ctx.fillStyle = '#64748b'; ctx.font = '12px "Be Vietnam Pro"'; ctx.fillText('Chưa có Pod nào — thử kubectl run web --image=nginx', x0 + cpW + 20, ry + 44); }
+
+    // Service → endpoint (chỉ Pod READY); có chấm sáng chạy dọc dây khi vừa có request đi qua
+    const now = engine.now();
+    const recent = engine.state.requests.filter((r) => r.t && now - r.t < 1500 && r.pod);
+    Object.values(svcPos).forEach((sp) => engine.endpoints(sp.s).forEach((pd) => {
+      const pp = podPos[pd.metadata.name];
+      if (!pp) return;
+      ctx.strokeStyle = 'rgba(45,212,191,0.28)'; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(sp.x, sp.y); ctx.bezierCurveTo(sp.x, sp.y + 24, pp.x, pp.y - 24, pp.x, pp.y); ctx.stroke();
+      if (recent.some((r) => r.pod === pd.metadata.name && r.svc === sp.s.metadata.name)) {
+        const k = (t % 900) / 900, u = 1 - k;
+        const bx = u * u * u * sp.x + 3 * u * u * k * sp.x + 3 * u * k * k * pp.x + k * k * k * pp.x;
+        const by = u * u * u * sp.y + 3 * u * u * k * (sp.y + 24) + 3 * u * k * k * (pp.y - 24) + k * k * k * pp.y;
+        App.dot(ctx, bx, by, 3.5, '#5eead4');
+      }
+    }));
+  };
+
   // ---------- Khung chung cho bài DevOps: engine + terminal + sơ đồ + nút đặt lại ----------
   // Trả về { engine, term, cv, editor }; lesson.state luôn trỏ tới engine hiện tại để lab tự kiểm tra
-  App.dvSetup = function (sim, ctx, lesson, { files = {}, editFiles = null, chips = [], welcome = [], diagram = 'docker', title, height = 300, cvHeight = 300 } = {}) {
-    const top = App.h(`<div class="sim-top"><h2>${title || '🐳 Môi trường thực hành'}</h2><button class="btn small ghost" type="button" id="reset-env-${lesson.id}">↺ Đặt lại môi trường</button></div>`);
+  // engine: 'docker' | 'kube' — chọn bộ mô phỏng; diagram: 'docker' | 'layers' | 'k8s'
+  const LEGENDS = {
+    docker: '<div class="dv-legend"><span style="--c:#34d399">Đang chạy</span><span style="--c:#64748b">Đã dừng (mã 0)</span><span style="--c:#f87171">Lỗi (mã ≠ 0)</span><span style="--c:#38bdf8">Image</span><span style="--c:#c084fc">Volume</span></div>',
+    layers: '<div class="dv-legend"><span style="--c:#2dd4bf">Lấy từ cache</span><span style="--c:#fb923c">Build lại</span><span style="--c:#64748b">Lớp của image gốc</span></div>',
+    k8s: '<div class="dv-legend"><span style="--c:#34d399">Running · sẵn sàng</span><span style="--c:#fbbf24">Running · chưa sẵn sàng</span><span style="--c:#38bdf8">Đang khởi tạo</span><span style="--c:#f87171">Lỗi</span><span style="--c:#64748b">Đang xóa / xong</span><span style="--c:#2dd4bf">Service</span><span style="--c:#f472b6">Ingress</span><span style="--c:#c084fc">Ổ đĩa PVC</span></div>',
+  };
+  App.dvSetup = function (sim, ctx, lesson, { files = {}, editFiles = null, chips = [], welcome = [], diagram = 'docker', engine: kind = 'docker', title, height = 300, cvHeight = 300 } = {}) {
+    const top = App.h(`<div class="sim-top"><h2>${title || (kind === 'kube' ? '☸️ Cluster thực hành' : '🐳 Môi trường thực hành')}</h2><button class="btn small ghost" type="button" id="reset-env-${lesson.id}">↺ Đặt lại môi trường</button></div>`);
     sim.classList.add('dv-sim');
     sim.appendChild(top);
     const holder = { engine: null, term: null, editor: null };
@@ -310,27 +496,26 @@
     const edBox = document.createElement('div');
     sim.appendChild(cvBox);
     if (editFiles) { const split = App.h('<div class="dv-split"></div>'); split.appendChild(edBox); split.appendChild(termBox); sim.appendChild(split); } else sim.appendChild(termBox);
-    const legend = App.h(diagram === 'docker'
-      ? '<div class="dv-legend"><span style="--c:#34d399">Đang chạy</span><span style="--c:#64748b">Đã dừng (mã 0)</span><span style="--c:#f87171">Lỗi (mã ≠ 0)</span><span style="--c:#38bdf8">Image</span><span style="--c:#c084fc">Volume</span></div>'
-      : '<div class="dv-legend"><span style="--c:#2dd4bf">Lấy từ cache</span><span style="--c:#fb923c">Build lại</span><span style="--c:#64748b">Lớp của image gốc</span></div>');
-    cvBox.appendChild(legend);
+    cvBox.appendChild(App.h(LEGENDS[diagram] || LEGENDS.docker));
 
     function boot() {
       if (holder.editor) holder.editor.destroy();
       edBox.innerHTML = ''; termBox.innerHTML = '';
-      const engine = window.DevOpsSim.createDocker({ seed: 7, files: JSON.parse(JSON.stringify(files)) });
+      const opts = { seed: 7, files: JSON.parse(JSON.stringify(files)) };
+      const engine = kind === 'kube' ? window.DevOpsSim.createKube(opts) : window.DevOpsSim.createDocker(opts);
       holder.engine = engine;
       lesson.state = engine;
-      holder.term = App.terminal(termBox, { engine, chips, welcome, height });
+      holder.term = App.terminal(termBox, { engine, chips, welcome, height, title: kind === 'kube' ? 'Terminal — máy có kubectl, nối tới cluster kind "lab"' : undefined });
       if (editFiles) holder.editor = App.fileEditor(edBox, { engine, files: editFiles });
     }
     boot();
     top.querySelector('button').addEventListener('click', () => { boot(); App.toast('Đã đặt lại môi trường lab về trạng thái ban đầu.'); });
-    // Đồng hồ thật: cho các container "sleep N" tự kết thúc đúng hạn
+    // Đồng hồ thật: container "sleep N" tự kết thúc, controller K8s tự hòa giải (tạo lại Pod, HPA...)
     ctx.interval(() => holder.engine.tick(), 1000);
     ctx.loop(() => {
       if (!cv.w) return;
       if (diagram === 'docker') App.dockerDiagram(cv, holder.engine, performance.now());
+      else if (diagram === 'k8s') App.k8sDiagram(cv, holder.engine, performance.now());
       else App.layerDiagram(cv, holder.engine);
     });
     ctx.onCleanup(() => holder.editor && holder.editor.destroy());

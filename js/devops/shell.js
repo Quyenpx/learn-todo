@@ -60,7 +60,8 @@
         const orig = eq > 0 ? t.slice(2, eq) : t.slice(2);
         const name = alias[orig] || orig;
         if (bool.has(name)) { flags[name] = eq > 0 ? t.slice(eq + 1) !== 'false' : true; continue; }
-        if (value.has(name)) {
+        // Cờ multi (vd --from-literal lặp nhiều lần) cũng nhận giá trị như cờ value
+        if (value.has(name) || multi.has(name)) {
           const v = eq > 0 ? t.slice(eq + 1) : tokens[++i];
           if (v === undefined) return { flags, args, rest, error: `flag needs an argument: --${orig}` };
           setVal(name, v);
@@ -73,7 +74,7 @@
         for (let j = 0; j < chars.length; j++) {
           const c = chars[j], name = alias[c] || c;
           if (bool.has(name)) { flags[name] = true; continue; }
-          if (value.has(name)) {
+          if (value.has(name) || multi.has(name)) {
             const v = j + 1 < chars.length ? chars.slice(j + 1).replace(/^=/, '') : tokens[++i];
             if (v === undefined) return { flags, args, rest, error: `flag needs an argument: '${c}' in -${c}` };
             setVal(name, v);
