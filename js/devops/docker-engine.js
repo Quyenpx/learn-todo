@@ -1370,7 +1370,7 @@
       const tags = (a.flags.t || []).map((t) => REG.parseRef(t));
       cur.kind = 'build'; cur.meta = { tags: tags.map((t) => t.ref) };
       const res = B.run({
-        files, context: a.args[0], dockerfile: a.flags.f || 'Dockerfile', cache: state.buildCache, noCache: !!a.flags['no-cache'], target: a.flags.target,
+        files, now, context: a.args[0], dockerfile: a.flags.f || 'Dockerfile', cache: state.buildCache, noCache: !!a.flags['no-cache'], target: a.flags.target,
         buildArgs: parseEnv(a.flags['build-arg']),
         resolveBase: (ref) => {
           const local = findImage(ref);
@@ -1474,7 +1474,7 @@
             const ctx = typeof s.build === 'string' ? s.build : (s.build.context || '.');
             const df = typeof s.build === 'object' && s.build.dockerfile ? s.build.dockerfile : 'Dockerfile';
             p(`[+] Building ${sn}`);
-            const res = B.run({ files, context: ctx, dockerfile: df, cache: state.buildCache, resolveBase: (ref) => findImage(ref) || (() => { const r = REG.resolve(ref); if (r.error) return null; r.def.layers.forEach((l) => state.layers.add(l.id)); return addImageRef(imageFromDef(r.def, r.repo, r.tag)); })() });
+            const res = B.run({ files, now, context: ctx, dockerfile: df, cache: state.buildCache, resolveBase: (ref) => findImage(ref) || (() => { const r = REG.resolve(ref); if (r.error) return null; r.def.layers.forEach((l) => state.layers.add(l.id)); return addImageRef(imageFromDef(r.def, r.repo, r.tag)); })() });
             res.lines.forEach((l) => p(l.text, l.cls));
             if (!res.ok) { err(`failed to solve: service "${sn}" build failed`); return false; }
             const pr = REG.parseRef(s.image);

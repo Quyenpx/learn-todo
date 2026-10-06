@@ -228,3 +228,107 @@ test('docker: exec vào container và gợi ý Tab', () => {
   assert.equal(d.complete('docker stop w').line, 'docker stop web ');
   assert.ok(d.complete('docker st').options.includes('start'));
 });
+
+// ---------- Nhiệm vụ 4: docker build ----------
+// Dự án Python mẫu dùng chung cho bài D2. ".venv/" và ".git/" là thư mục ảo nặng để minh họa vai trò của .dockerignore
+const APP_PY = 'from flask import Flask\napp = Flask(__name__)\n\n@app.get("/")\ndef index():\n    return "Hello from myapp!"\n\napp.run(host="0.0.0.0", port=5000)\n';
+const DF_NAIVE = 'FROM python:3.12\nWORKDIR /app\nCOPY . .\nRUN pip install -r requirements.txt\nEXPOSE 5000\nCMD ["python", "app.py"]\n';
+const DF_OPT = 'FROM python:3.12\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install -r requirements.txt\nCOPY . .\nEXPOSE 5000\nCMD ["python", "app.py"]\n';
+const pyFiles = (df, extra = {}) => Object.assign({ Dockerfile: df, 'app.py': APP_PY, 'requirements.txt': 'flask==3.0.3\nredis==5.0.8\n', '.venv/': { size: 180e6 }, '.git/': { size: 25e6 } }, extra);
+const lastBuild = (d) => d.builds[d.builds.length - 1];
+const stepOf = (b, re) => b.steps.find((s) => re.test(s.text));
+
+test('build: lần đầu không có cache, build lại y nguyên thì mọi bước đều CACHED', () => {
+  const d = mkDocker({ files: pyFiles(DF_NAIVE) });
+  let r = d.exec('docker build -t myapp:v1 .');
+  assert.ok(r.ok, out(r));
+  assert.match(out(r), /\[\+\] Building [\d.]+s \(\d+\/\d+\) FINISHED/);
+  assert.match(out(r), /\[1\/4\] FROM docker\.io\/library\/python:3\.12/);
+  assert.match(out(r), /naming to docker\.io\/library\/myapp:v1/);
+  assert.ok(lastBuild(d).steps.length === 3 && lastBuild(d).steps.every((s) => !s.cached));
+  assert.ok(d.findImage('myapp:v1'));
+  r = d.exec('docker build -t myapp:v1 .');
+  assert.ok(lastBuild(d).steps.every((s) => s.cached));
+  assert.match(out(r), /CACHED \[3\/4\] COPY \. \./);
+});
+
+test('build: Dockerfile chưa tối ưu — sửa app.py làm bước pip install bị chạy lại', () => {
+  const d = mkDocker({ files: pyFiles(DF_NAIVE) });
+  d.exec('docker build -t myapp:v1 .');
+  d.setFile('app.py', APP_PY.replace('Hello', 'Xin chao'));
+  d.exec('docker build -t myapp:v1 .');
+  const b = lastBuild(d);
+  assert.equal(stepOf(b, /^WORKDIR/).cached, true);
+  assert.equal(stepOf(b, /^COPY \. \./).cached, false);
+  assert.equal(stepOf(b, /pip install/).cached, false);
+  assert.match(out(d.exec('docker images')), /<none>/, 'image cũ mất tag thành <none>');
+});
+
+test('build: Dockerfile tối ưu — sửa app.py nhưng bước pip install vẫn CACHED', () => {
+  const d = mkDocker({ files: pyFiles(DF_OPT) });
+  d.exec('docker build -t myapp:v1 .');
+  d.setFile('app.py', APP_PY.replace('Hello', 'Xin chao'));
+  d.exec('docker build -t myapp:v2 .');
+  const b = lastBuild(d);
+  assert.equal(stepOf(b, /pip install/).cached, true);
+  assert.equal(stepOf(b, /^COPY \. \./).cached, false);
+  d.setFile('requirements.txt', 'flask==3.0.3\nredis==5.0.8\nrequests==2.32.3\n');
+  d.exec('docker build -t myapp:v3 .');
+  assert.equal(stepOf(lastBuild(d), /pip install/).cached, false, 'đổi requirements.txt thì phải cài lại');
+});
+
+test('build: .dockerignore, image slim và multi-stage làm image nhỏ đi', () => {
+  const d = mkDocker({ files: pyFiles(DF_OPT) });
+  d.exec('docker build -t myapp:v1 .');
+  const v1 = d.findImage('myapp:v1').size;
+  d.setFile('.dockerignore', '.venv\n.git\n__pycache__/\n*.pyc\n');
+  d.exec('docker build -t myapp:ignore .');
+  assert.ok(d.findImage('myapp:ignore').size < v1 - 200e6, '.dockerignore phải loại .venv và .git');
+  d.setFile('Dockerfile', DF_OPT.replace('python:3.12', 'python:3.12-slim').replace('pip install', 'pip install --no-cache-dir'));
+  d.exec('docker build -t myapp:slim .');
+  assert.ok(d.findImage('myapp:slim').size < v1 * 0.5, 'slim phải nhỏ hơn 50%');
+  const single = 'FROM python:3.12-slim\nWORKDIR /app\nRUN apt-get update && apt-get install -y gcc build-essential\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nCMD ["python", "app.py"]\n';
+  const multi = 'FROM python:3.12-slim AS builder\nWORKDIR /app\nRUN apt-get update && apt-get install -y gcc build-essential\nCOPY requirements.txt .\nRUN pip install --no-cache-dir --prefix=/install -r requirements.txt\n\nFROM python:3.12-slim\nWORKDIR /app\nCOPY --from=builder /install /usr/local\nCOPY . .\nCMD ["python", "app.py"]\n';
+  d.setFile('Dockerfile', single);
+  d.exec('docker build -t myapp:single .');
+  d.setFile('Dockerfile', multi);
+  const r = d.exec('docker build -t myapp:multi .');
+  assert.ok(r.ok, out(r));
+  assert.match(out(r), /\[builder 1\/5\] FROM/);
+  assert.match(out(r), /\[stage-1 3\/4\] COPY --from=builder \/install \/usr\/local/);
+  assert.ok(d.findImage('myapp:multi').size < d.findImage('myapp:single').size - 150e6, 'multi-stage bỏ được công cụ build');
+});
+
+test('build: lỗi cú pháp, thiếu file, image gốc không tồn tại, quên dấu chấm', () => {
+  const d = mkDocker({ files: pyFiles('FROM python:3.12\nWORKDIR /app\nCOPY . .\nRUNN pip install -r requirements.txt\n') });
+  let r = d.exec('docker build -t x .');
+  assert.equal(r.ok, false);
+  assert.match(out(r), /dockerfile parse error on line 4: unknown instruction: RUNN/);
+  assert.equal(lastBuild(d).errorLine, 4);
+  d.setFile('Dockerfile', 'FROM python:3.12\nCOPY khongco.txt .\n');
+  r = d.exec('docker build -t x .');
+  assert.match(out(r), /"\/khongco\.txt": not found/);
+  d.setFile('Dockerfile', 'FROM khongco:1\n');
+  r = d.exec('docker build -t x .');
+  assert.match(out(r), /failed to resolve source metadata for docker\.io\/library\/khongco:1/);
+  d.setFile('Dockerfile', 'FROM python:3.12\nWORKDIR /app\nRUN pip install -r requirements.txt\nCOPY . .\n');
+  r = d.exec('docker build -t x .');
+  assert.match(out(r), /Could not open requirements file/);
+  assert.match(out(r), /did not complete successfully: exit code: 1/);
+  r = d.exec('docker build -t x');
+  assert.match(out(r), /requires exactly 1 argument/);
+  assert.ok(r.lines.some((l) => l.cls === 'hint' && l.text.includes('dấu chấm')));
+});
+
+test('build: chạy image vừa build và xem history', () => {
+  const d = mkDocker({ files: pyFiles(DF_OPT, { '.dockerignore': '.venv\n.git\n' }) });
+  d.exec('docker build -t myapp:v1 .');
+  d.exec('docker run -d --name app -p 5000:5000 myapp:v1');
+  assert.equal(d.find('app').status, 'running');
+  assert.match(out(d.exec('curl localhost:5000')), /Hello from myapp!/);
+  assert.match(out(d.exec('docker history myapp:v1')), /RUN \/bin\/sh -c pip install/);
+  d.setFile('Dockerfile', 'FROM python:3.12-slim\nWORKDIR /app\nCOPY . .\n');
+  d.exec('docker build -t nocmd .');
+  d.exec('docker run -d --name nocmd nocmd');
+  assert.equal(d.find('nocmd').status, 'exited', 'không có CMD thì kế thừa CMD python3 và thoát ngay');
+});
