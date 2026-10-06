@@ -34,7 +34,24 @@
       this.save(); App.emit('progress');
     },
     reset() { this.data = {}; this.save(); App.emit('progress'); },
+    // Chỉ xóa tiến độ của một khóa để không làm mất kết quả của khóa còn lại
+    resetCourse(course) {
+      App.lessonsOf(course).forEach((l) => { if (this.data.labs) delete this.data.labs[l.id]; if (this.data.quiz) delete this.data.quiz[l.id]; });
+      this.save(); App.emit('progress');
+    },
   });
+
+  // ---------- Hai khóa học: AI và DevOps ----------
+  // Bài không khai báo course mặc định thuộc khóa AI (giữ tương thích các bài cũ)
+  App.courses = {
+    ai: { id: 'ai', name: 'AI / ML', icon: '🧠', home: 'home', sub: 'Học AI bằng cách nhìn thấy', title: 'Học Machine Learning trực quan' },
+    devops: { id: 'devops', name: 'DevOps', icon: '🐳', home: 'devops-home', sub: 'Docker & Kubernetes thực chiến', title: 'Học Docker & Kubernetes thực hành' },
+  };
+  App.courseOf = (l) => (l && l.course) || 'ai';
+  App.lessonsOf = (course) => App.lessons.filter((l) => App.courseOf(l) === course);
+  App.url = (l) => { const lesson = typeof l === 'string' ? App.lessons.find((x) => x.id === l) : l; return lesson ? `#/${App.courseOf(lesson)}/${lesson.id}` : '#/'; };
+  App.activeCourse = 'ai';
+  const LAST_COURSE = 'vlab-last-course';
 
   App.lessonProgress = function (lesson) {
     let parts = 0, sum = 0;
@@ -275,8 +292,9 @@
 
   // ---------- Khung trang bài học ----------
   App.shell = function (root, lesson, theoryHtml) {
-    const idx = App.lessons.indexOf(lesson);
-    const prev = App.lessons[idx - 1], next = App.lessons[idx + 1];
+    const list = App.lessonsOf(App.courseOf(lesson));
+    const idx = list.indexOf(lesson);
+    const prev = list[idx - 1], next = list[idx + 1];
     const el = App.h(`<section class="lesson">
       <header class="lesson-head reveal">
         <span class="badge">${lesson.badge}</span>
@@ -295,8 +313,8 @@
         <div class="section-head"><h2 id="quiz-h-${lesson.id}">✅ Kiểm tra kiến thức</h2><span class="pill" id="quiz-best-${lesson.id}"></span></div>
         <div class="quiz"></div></section>` : ''}
       <nav class="lesson-nav" aria-label="Chuyển bài">
-        ${prev ? `<a href="#/${prev.id}" class="btn ghost" id="prev-lesson">← ${prev.navTitle || prev.title}</a>` : '<span></span>'}
-        ${next ? `<a href="#/${next.id}" class="btn primary" id="next-lesson">${next.navTitle || next.title} →</a>` : ''}
+        ${prev ? `<a href="${App.url(prev)}" class="btn ghost" id="prev-lesson">← ${prev.navTitle || prev.title}</a>` : '<span></span>'}
+        ${next ? `<a href="${App.url(next)}" class="btn primary" id="next-lesson">${next.navTitle || next.title} →</a>` : ''}
       </nav>
     </section>`);
     root.appendChild(el);
@@ -438,32 +456,62 @@
 
   function renderNav() {
     const nav = document.getElementById('nav');
+    const course = App.courses[App.activeCourse];
     let lastGroup = null, html = '';
-    App.lessons.forEach((l) => {
+    App.lessonsOf(course.id).forEach((l) => {
       if (l.group && l.group !== lastGroup) { html += `<div class="nav-group">${l.group}</div>`; lastGroup = l.group; }
       const tracked = l.labs || l.quiz;
-      html += `<a href="#/${l.id}" id="nav-${l.id}" class="nav-item ${l.id === activeId ? 'active' : ''}" ${l.id === activeId ? 'aria-current="page"' : ''}>
+      html += `<a href="${App.url(l)}" id="nav-${l.id}" class="nav-item ${l.id === activeId ? 'active' : ''}" ${l.id === activeId ? 'aria-current="page"' : ''}>
         <span class="nav-icon">${l.icon}</span>
         <span class="nav-text"><span class="nav-title">${l.navTitle || l.title}</span>${l.navSub ? `<span class="nav-sub">${l.navSub}</span>` : ''}</span>
         ${tracked ? ring(App.lessonProgress(l)) : ''}</a>`;
     });
+    // Các bài đã lên lộ trình nhưng chưa phát hành (hiển thị mờ để người học biết hướng đi tiếp)
+    (course.upcoming || []).forEach((u) => {
+      if (u.group && u.group !== lastGroup) { html += `<div class="nav-group">${u.group}</div>`; lastGroup = u.group; }
+      html += `<div class="nav-item soon" aria-disabled="true"><span class="nav-icon">${u.icon}</span><span class="nav-text"><span class="nav-title">${u.title}</span><span class="nav-sub">Sắp ra mắt</span></span></div>`;
+    });
     nav.innerHTML = html;
-    const tracked = App.lessons.filter((l) => l.labs || l.quiz);
-    const overall = tracked.reduce((s, l) => s + App.lessonProgress(l), 0) / Math.max(1, tracked.length);
+    const overall = App.overallProgress(course.id);
     document.getElementById('overall-pct').textContent = Math.round(overall * 100) + '%';
     document.getElementById('overall-bar').style.width = overall * 100 + '%';
+    document.querySelectorAll('.brand-sub').forEach((n) => (n.textContent = course.sub));
+    const sw = document.getElementById('course-switch');
+    if (sw) sw.querySelectorAll('button').forEach((b) => { const on = b.dataset.v === course.id; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   }
-  App.overallProgress = () => {
-    const tracked = App.lessons.filter((l) => l.labs || l.quiz);
+  App.overallProgress = (course = App.activeCourse) => {
+    const tracked = App.lessonsOf(course).filter((l) => l.labs || l.quiz);
     return tracked.reduce((s, l) => s + App.lessonProgress(l), 0) / Math.max(1, tracked.length);
   };
 
+  // Phân tích hash: "#/<khóa>/<bài>"; dạng cũ "#/<bài>" được đổi tại chỗ bằng replaceState
+  function resolveRoute() {
+    const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+    if (parts[0] && App.courses[parts[0]]) {
+      const course = App.courses[parts[0]];
+      const lesson = App.lessonsOf(course.id).find((l) => l.id === (parts[1] || course.home)) || App.lessons.find((l) => l.id === course.home) || App.lessonsOf(course.id)[0];
+      return lesson;
+    }
+    if (parts[0]) {
+      const old = App.lessons.find((l) => l.id === parts[0]);
+      if (old) { history.replaceState(null, '', App.url(old)); return old; }
+    }
+    let last = 'ai';
+    try { last = localStorage.getItem(LAST_COURSE) || 'ai'; } catch (e) { /* bỏ qua */ }
+    const c = App.courses[last] || App.courses.ai;
+    const home = App.lessons.find((l) => l.id === c.home) || App.lessons[0];
+    history.replaceState(null, '', App.url(home));
+    return home;
+  }
+
   function navigate() {
-    const id = location.hash.replace(/^#\/?/, '') || 'home';
-    const lesson = App.lessons.find((l) => l.id === id) || App.lessons[0];
+    const lesson = resolveRoute();
     cleanups.forEach((f) => { try { f(); } catch (e) { console.error(e); } });
     cleanups = [];
     activeId = lesson.id;
+    App.activeCourse = App.courseOf(lesson);
+    document.body.dataset.course = App.activeCourse;
+    try { localStorage.setItem(LAST_COURSE, App.activeCourse); } catch (e) { /* chế độ ẩn danh */ }
     const main = document.getElementById('main');
     main.innerHTML = '';
     window.scrollTo(0, 0);
@@ -480,7 +528,8 @@
       canvas(parent, opts) { const cv = App.canvas(parent, opts); cleanups.push(cv.destroy); return cv; },
     };
     lesson.render(main, ctx);
-    document.title = (lesson.id === 'home' ? '' : lesson.navTitle + ' · ') + 'ML Visual Lab — Học Machine Learning trực quan';
+    const course = App.courses[App.activeCourse];
+    document.title = (lesson.id === course.home ? '' : (lesson.navTitle || lesson.title) + ' · ') + `Visual Lab — ${course.title}`;
     renderNav();
     document.body.classList.remove('nav-open');
   }
@@ -490,8 +539,19 @@
     App.on('progress', renderNav);
     document.getElementById('menu-btn').addEventListener('click', () => document.body.classList.toggle('nav-open'));
     document.getElementById('scrim').addEventListener('click', () => document.body.classList.remove('nav-open'));
+    // Nút chuyển khóa: về trang chủ của khóa được chọn
+    const sw = document.getElementById('course-switch');
+    if (sw) {
+      sw.innerHTML = Object.values(App.courses).map((c) => `<button type="button" data-v="${c.id}" id="course-${c.id}"><span aria-hidden="true">${c.icon}</span> ${c.name}</button>`).join('');
+      sw.addEventListener('click', (e) => {
+        const b = e.target.closest('button');
+        if (b && b.dataset.v !== App.activeCourse) location.hash = App.url(App.courses[b.dataset.v].home);
+      });
+    }
+    document.getElementById('brand-link').addEventListener('click', (e) => { e.preventDefault(); location.hash = App.url(App.courses[App.activeCourse].home); });
     document.getElementById('reset-progress').addEventListener('click', () => {
-      if (confirm('Xóa toàn bộ tiến độ lab và điểm kiểm tra?')) { store.reset(); navigate(); App.toast('Đã xóa tiến độ.'); }
+      const c = App.courses[App.activeCourse];
+      if (confirm(`Xóa tiến độ lab và điểm kiểm tra của khóa ${c.name}?`)) { store.resetCourse(c.id); navigate(); App.toast('Đã xóa tiến độ.'); }
     });
     navigate();
   };

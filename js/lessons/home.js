@@ -8,8 +8,8 @@
     navTitle: 'Tổng quan',
     navSub: 'Bắt đầu từ đây',
     render(root) {
-      const lessons = App.lessons.filter((l) => l.id !== 'home');
-      const pct = Math.round(App.overallProgress() * 100);
+      const lessons = App.lessonsOf('ai').filter((l) => l.id !== 'home');
+      const pct = Math.round(App.overallProgress('ai') * 100);
       const el = App.h(`<div class="lesson">
         <section class="hero reveal">
           <div>
@@ -17,8 +17,8 @@
             <h1 style="margin-top:14px">Hiểu <span class="grad-text">Machine Learning</span> và <span class="grad-text">Deep Learning</span> qua mô phỏng trực quan</h1>
             <p class="lead">Mỗi bài gồm 4 phần: <b>lý thuyết ngắn gọn</b>, <b>mô phỏng tương tác</b> cho bạn tự chỉnh tham số và quan sát, <b>bài lab</b> có nhiệm vụ được hệ thống tự kiểm tra, và <b>bài trắc nghiệm</b> để xác nhận bạn đã hiểu.</p>
             <div class="hero-cta">
-              <a href="#/${lessons[0].id}" class="btn primary" id="start-btn">${pct > 0 ? 'Tiếp tục học' : 'Bắt đầu bài 1'} →</a>
-              <a href="#/final" class="btn" id="final-btn">🎓 Bài kiểm tra tổng hợp</a>
+              <a href="${App.url(lessons[0])}" class="btn primary" id="start-btn">${pct > 0 ? 'Tiếp tục học' : 'Bắt đầu bài 1'} →</a>
+              <a href="${App.url('final')}" class="btn" id="final-btn">🎓 Bài kiểm tra tổng hợp</a>
             </div>
             <p class="muted" style="margin-top:14px;font-size:14px">Tiến độ của bạn: <b>${pct}%</b>, được lưu tự động trên trình duyệt này.</p>
           </div>
@@ -44,7 +44,7 @@
           <h2>📚 Lộ trình bài học</h2>
           <div class="cards">${lessons.map((l, i) => {
             const p = App.lessonProgress(l);
-            return `<a class="lesson-card" href="#/${l.id}" id="card-${l.id}">
+            return `<a class="lesson-card" href="${App.url(l)}" id="card-${l.id}">
               <span class="ic">${l.icon}</span>
               <h3>${l.id === 'final' ? '' : `Bài ${i + 1}. `}${l.navTitle}</h3>
               <p>${l.cardText || ''}</p>

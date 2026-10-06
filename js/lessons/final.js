@@ -22,7 +22,7 @@
       { q: 'Kiến trúc nào phù hợp nhất cho bài toán nhận diện ảnh, và kiến trúc nào là nền tảng của ChatGPT?', options: ['RNN cho ảnh, CNN cho ChatGPT', 'CNN cho ảnh, Transformer cho ChatGPT', 'K-Means cho ảnh, hồi quy tuyến tính cho ChatGPT', 'MLP cho cả hai'], answer: 1, explain: 'CNN khai thác cấu trúc không gian của ảnh. Transformer với cơ chế Attention là nền tảng của các mô hình ngôn ngữ lớn.' },
     ],
     render(root) {
-      const tracked = App.lessons.filter((l) => l.id !== 'home' && l.id !== 'final');
+      const tracked = App.lessonsOf('ai').filter((l) => l.id !== 'home' && l.id !== 'final');
       // Gộp đoạn code (nếu có) vào nội dung câu hỏi để quizUI hiển thị
       lesson.quiz.forEach((q) => { if (q.code && !q._merged) { q.q += `<pre class="code">${q.code}</pre>`; q._merged = true; } });
       const el = App.h(`<section class="lesson">
@@ -35,7 +35,7 @@
           <h2>📊 Tiến độ từng bài</h2>
           <div class="cards">${tracked.map((l, i) => {
             const done = App.store.labDone(l.id), nDone = l.labs.filter((t) => done[t.id]).length, q = App.store.quiz(l.id);
-            return `<a class="lesson-card" href="#/${l.id}">
+            return `<a class="lesson-card" href="${App.url(l)}">
               <span class="ic">${l.icon}</span><h3>Bài ${i + 1}. ${l.navTitle}</h3>
               <p>🧪 Lab: <b>${nDone}/${l.labs.length}</b> nhiệm vụ<br>✅ Trắc nghiệm: <b>${q ? `${q.score}/${q.total}` : 'chưa làm'}</b></p>
               <div class="bar"><span style="width:${App.lessonProgress(l) * 100}%"></span></div></a>`;
