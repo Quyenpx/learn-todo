@@ -332,3 +332,77 @@ test('build: chạy image vừa build và xem history', () => {
   d.exec('docker run -d --name nocmd nocmd');
   assert.equal(d.find('nocmd').status, 'exited', 'không có CMD thì kế thừa CMD python3 và thoát ngay');
 });
+
+// ---------- Nhiệm vụ 5: volume, network, compose ----------
+test('volume: dữ liệu redis mất khi rm nếu không có volume, còn nếu có volume', () => {
+  const d = mkDocker();
+  d.exec('docker run -d --name r1 redis:7');
+  d.exec('docker exec r1 redis-cli set k xin');
+  assert.match(out(d.exec('docker exec r1 redis-cli get k')), /xin/);
+  d.exec('docker rm -f r1');
+  d.exec('docker run -d --name r1 redis:7');
+  assert.doesNotMatch(out(d.exec('docker exec r1 redis-cli get k')), /xin/);
+  d.exec('docker rm -f r1');
+  d.exec('docker run -d --name r2 -v redis-data:/data redis:7');
+  d.exec('docker exec r2 redis-cli set k chao');
+  d.exec('docker rm -f r2');
+  d.exec('docker run -d --name r3 -v redis-data:/data redis:7');
+  assert.match(out(d.exec('docker exec r3 redis-cli get k')), /chao/);
+  assert.match(out(d.exec('docker volume ls')), /redis-data/);
+});
+
+test('network: ping theo tên chỉ chạy trên network tự tạo', () => {
+  const d = mkDocker();
+  d.exec('docker run -d --name c1 alpine sleep 3600');
+  d.exec('docker run -d --name c2 alpine sleep 3600');
+  let r = d.exec('docker exec c1 ping -c 1 c2');
+  assert.equal(r.ok, false);
+  assert.match(out(r), /bad address|unknown host/i);
+  d.exec('docker network create appnet');
+  d.exec('docker network connect appnet c1');
+  d.exec('docker network connect appnet c2');
+  r = d.exec('docker exec c1 ping -c 1 c2');
+  assert.ok(r.ok, out(r));
+  assert.match(out(r), /1 packets received|bytes from/);
+});
+
+test('counter: vlab/counter đếm lượt truy cập qua redis cùng network', () => {
+  const d = mkDocker();
+  d.exec('docker network create appnet');
+  d.exec('docker run -d --name redis --network appnet redis:7');
+  d.exec('docker run -d --name web --network appnet -p 5000:5000 vlab/counter:1.0');
+  assert.match(out(d.exec('curl localhost:5000')), /1 l/);
+  assert.match(out(d.exec('curl localhost:5000')), /2 l/);
+});
+
+const COMPOSE = 'services:\n  web:\n    image: vlab/counter:1.0\n    ports:\n      - "5000:5000"\n    depends_on:\n      - redis\n  redis:\n    image: redis:7\n    volumes:\n      - redis-data:/data\nvolumes:\n  redis-data:\n';
+
+test('compose: up tạo network/container/volume, down giữ volume, down -v xóa volume', () => {
+  const d = mkDocker({ files: { 'compose.yaml': COMPOSE } });
+  let r = d.exec('docker compose up -d');
+  assert.ok(r.ok, out(r));
+  assert.ok(d.find('lab-web-1') && d.find('lab-redis-1'));
+  assert.equal(d.find('lab-web-1').status, 'running');
+  assert.match(out(d.exec('docker network ls')), /lab_default/);
+  assert.match(out(d.exec('docker volume ls')), /lab_redis-data/);
+  assert.match(out(d.exec('curl localhost:5000')), /1 l/);
+  assert.match(out(d.exec('docker compose ps')), /lab-web-1/);
+  d.exec('docker compose down');
+  assert.equal(d.find('lab-web-1'), undefined);
+  assert.doesNotMatch(out(d.exec('docker network ls')), /lab_default/);
+  assert.match(out(d.exec('docker volume ls')), /lab_redis-data/);
+  d.exec('docker compose up -d');
+  d.exec('docker compose down -v');
+  assert.doesNotMatch(out(d.exec('docker volume ls')), /lab_redis-data/);
+});
+
+test('compose: YAML lỗi báo số dòng, thiếu file báo lỗi', () => {
+  const d = mkDocker({ files: { 'compose.yaml': 'services:\n  web:\n    image: nginx\n   ports:\n      - "80:80"\n' } });
+  let r = d.exec('docker compose up -d');
+  assert.equal(r.ok, false);
+  assert.match(out(r), /line 4/);
+  const d2 = mkDocker({ files: {} });
+  r = d2.exec('docker compose up -d');
+  assert.equal(r.ok, false);
+  assert.match(out(r), /no configuration file provided/);
+});
