@@ -539,19 +539,37 @@
     App.on('progress', renderNav);
     document.getElementById('menu-btn').addEventListener('click', () => document.body.classList.toggle('nav-open'));
     document.getElementById('scrim').addEventListener('click', () => document.body.classList.remove('nav-open'));
+    const sideClose = document.getElementById('sidebar-close');
+    if (sideClose) sideClose.addEventListener('click', () => document.body.classList.remove('nav-open'));
+    // Đóng sidebar trên mobile khi người dùng chọn bất kỳ bài học nào
+    document.getElementById('nav').addEventListener('click', (e) => {
+      if (e.target.closest('a')) document.body.classList.remove('nav-open');
+    });
     // Nút chuyển khóa: về trang chủ của khóa được chọn
     const sw = document.getElementById('course-switch');
     if (sw) {
       sw.innerHTML = Object.values(App.courses).map((c) => `<button type="button" data-v="${c.id}" id="course-${c.id}"><span aria-hidden="true">${c.icon}</span> ${c.name}</button>`).join('');
       sw.addEventListener('click', (e) => {
         const b = e.target.closest('button');
-        if (b && b.dataset.v !== App.activeCourse) location.hash = App.url(App.courses[b.dataset.v].home);
+        if (b) {
+          document.body.classList.remove('nav-open');
+          if (b.dataset.v !== App.activeCourse) location.hash = App.url(App.courses[b.dataset.v].home);
+        }
       });
     }
-    document.getElementById('brand-link').addEventListener('click', (e) => { e.preventDefault(); location.hash = App.url(App.courses[App.activeCourse].home); });
+    document.getElementById('brand-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.body.classList.remove('nav-open');
+      location.hash = App.url(App.courses[App.activeCourse].home);
+    });
     document.getElementById('reset-progress').addEventListener('click', () => {
       const c = App.courses[App.activeCourse];
-      if (confirm(`Xóa tiến độ lab và điểm kiểm tra của khóa ${c.name}?`)) { store.resetCourse(c.id); navigate(); App.toast('Đã xóa tiến độ.'); }
+      if (confirm(`Xóa tiến độ lab và điểm kiểm tra của khóa ${c.name}?`)) {
+        store.resetCourse(c.id);
+        document.body.classList.remove('nav-open');
+        navigate();
+        App.toast('Đã xóa tiến độ.');
+      }
     });
     navigate();
   };
