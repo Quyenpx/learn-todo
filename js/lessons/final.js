@@ -22,14 +22,14 @@
       { q: 'Kiến trúc nào phù hợp nhất cho bài toán nhận diện ảnh, và kiến trúc nào là nền tảng của ChatGPT?', options: ['RNN cho ảnh, CNN cho ChatGPT', 'CNN cho ảnh, Transformer cho ChatGPT', 'K-Means cho ảnh, hồi quy tuyến tính cho ChatGPT', 'MLP cho cả hai'], answer: 1, explain: 'CNN khai thác cấu trúc không gian của ảnh. Transformer với cơ chế Attention là nền tảng của các mô hình ngôn ngữ lớn.' },
     ],
     render(root) {
-      const tracked = App.lessonsOf('ai').filter((l) => l.id !== 'home' && l.id !== 'final');
+      const tracked = App.lessonsOf('ai').filter((l) => l.id !== 'home' && l.id !== 'final' && l.kind !== 'resources');
       // Gộp đoạn code (nếu có) vào nội dung câu hỏi để quizUI hiển thị
       lesson.quiz.forEach((q) => { if (q.code && !q._merged) { q.q += `<pre class="code">${q.code}</pre>`; q._merged = true; } });
       const el = App.h(`<section class="lesson">
         <header class="lesson-head reveal">
           <span class="badge">Tổng kết khóa học</span>
           <h1>🎓 Bài kiểm tra tổng hợp</h1>
-          <p class="lead">Kiểm tra khả năng vận dụng kiến thức của cả 5 bài vào tình huống thực tế. Đạt từ 8/10 câu là bạn đã sẵn sàng chuyển sang thực hành bằng Python.</p>
+          <p class="lead">Kiểm tra khả năng vận dụng kiến thức của ${tracked.length} bài chuyên môn vào tình huống thực tế. Đạt từ 8/10 câu là bạn đã sẵn sàng chuyển sang thực hành bằng Python.</p>
         </header>
         <section class="card reveal">
           <h2>📊 Tiến độ từng bài</h2>

@@ -1,0 +1,20 @@
+/* Bố cục học mở rộng, kết quả mô phỏng và khóa AI tạo sinh. */
+body[data-course="genai"] { --accent: #a78bfa; }
+.course-switch { flex-wrap: wrap; }
+.course-switch button { flex: 1 1 75px; font-size: 12px; }
+.experiment-controls { display: grid; gap: 14px; }
+.experiment-controls label { display: grid; gap: 8px; }
+.experiment-controls input:not([type="range"]), .experiment-controls select, .experiment-controls textarea, .resource-filters input, .resource-filters select { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+.experiment-controls textarea { min-height: 110px; }
+.experiment-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
+.experiment-result { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 450px; overflow: auto; padding: 16px; background: rgba(0,0,0,.2); border-radius: 12px; font-size: 13px; }
+.study-content { display: grid; gap: 24px; margin-top: 24px; }
+.study-content p, .study-content li { line-height: 1.85; }
+.reference-item { padding: 16px 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.reference-item a { color: var(--accent); font-weight: 600; }
+.reference-item p { margin: 8px 0; }
+.reference-item small { color: var(--muted); }
+.resource-filters { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin: 24px 0; }
+.resource-filters label { display: grid; gap: 8px; }
+.resource-list { padding: 12px 24px; border: 1px solid var(--border); border-radius: 12px; }
+@media (max-width: 600px) { .resource-filters { grid-template-columns: 1fr; } .experiment-result { padding: 10px; font-size: 12px; } }

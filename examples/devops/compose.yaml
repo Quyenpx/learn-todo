@@ -1,0 +1,17 @@
+# Chạy từ thư mục gốc bằng docker compose -f examples/devops/compose.yaml up --build -d.
+services:
+  web:
+    image: visual-lab-local:1
+    build:
+      context: ../..
+      dockerfile: examples/devops/Dockerfile
+    ports:
+      - "127.0.0.1:8080:8080"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 128m
+    cpus: 0.5

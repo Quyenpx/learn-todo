@@ -205,7 +205,7 @@ spec:
             { q: 'Đóng gói toàn bộ shop.yaml thành một thứ cài được cho dev/staging/prod với cấu hình khác nhau — công cụ phù hợp?', options: ['docker compose', 'Helm chart với values riêng cho từng môi trường', 'kubectl run', 'Một Job'], answer: 1, explain: 'Hoặc Kustomize (overlay). Kết hợp GitOps (Argo CD/Flux) để cluster tự đồng bộ theo Git.' },
         ],
         render(root, ctx) {
-            const devops = App.lessonsOf('devops').filter((l) => l.labs && l.id !== lesson.id);
+            const devops = App.lessonsOf('devops').filter((l) => l.labs && l.id !== lesson.id && l.kind !== 'resources');
             const done = devops.filter((l) => App.lessonProgress(l) >= 0.999).length;
             const theory = `
         <h2>Đề bài</h2>

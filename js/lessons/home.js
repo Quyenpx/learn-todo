@@ -8,7 +8,7 @@
     navTitle: 'Tổng quan',
     navSub: 'Bắt đầu từ đây',
     render(root) {
-      const lessons = App.lessonsOf('ai').filter((l) => l.id !== 'home');
+      const lessons = App.lessonsOf('ai').filter((l) => l.id !== 'home' && l.kind !== 'resources');
       const pct = Math.round(App.overallProgress('ai') * 100);
       const el = App.h(`<div class="lesson">
         <section class="hero reveal">
@@ -41,7 +41,7 @@
         </section>
 
         <section class="reveal">
-          <h2>📚 Lộ trình bài học</h2>
+          <h2>📚 Lộ trình ${lessons.filter(l => l.id !== 'final').length} bài chuyên môn và kiểm tra tổng hợp</h2>
           <div class="cards">${lessons.map((l, i) => {
             const p = App.lessonProgress(l);
             return `<a class="lesson-card" href="${App.url(l)}" id="card-${l.id}">

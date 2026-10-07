@@ -100,7 +100,7 @@ spec:
     badge: 'DevOps · Bài 7',
     title: 'Ingress & HPA: một cổng vào cho nhiều app, số Pod tự theo tải',
     files: FILES,
-    lead: 'Mỗi Service một NodePort thì vừa xấu vừa khó nhớ. Ingress gom mọi thứ về cổng 80 và định tuyến theo domain/đường dẫn. Khi lượng truy cập tăng, HorizontalPodAutoscaler tự thêm Pod và bớt đi khi tải giảm.',
+    lead: 'Mô phỏng lịch sử: Ingress gom Service theo domain/đường dẫn, HPA (bộ tự co giãn ngang) điều chỉnh Pod theo tải. Ingress NGINX đã ngừng bảo trì tháng 3/2026; thực hành mới trên máy thật dùng Gateway API và controller hiện hành.',
     labs: [
       {
         id: 'apps', title: 'Triển khai hai app: shop và api',
@@ -136,7 +136,7 @@ spec:
     ],
     quiz: [
       { q: 'Ingress khác Service kiểu NodePort ở điểm nào?', options: ['Giống nhau', 'Ingress là quy tắc định tuyến HTTP (domain/đường dẫn) chạy trên một Ingress controller, gom nhiều Service sau một cổng 80/443', 'Ingress chỉ dùng cho TCP', 'Ingress thay thế Deployment'], answer: 1, explain: 'NodePort mở mỗi Service một cổng cao. Ingress đứng trước, đọc Host và path của request để chọn Service.' },
-      { q: 'Tạo Ingress nhưng không có Ingress controller nào trong cluster thì sao?', options: ['Kubernetes tự cài nginx', 'Ingress được lưu nhưng không có gì xử lý — không truy cập được', 'API server từ chối', 'Service tự đổi thành NodePort'], answer: 1, explain: 'Ingress chỉ là cấu hình. Cần cài controller (ingress-nginx, Traefik, HAProxy...) và chọn đúng ingressClassName.' },
+      { q: 'Tạo Ingress nhưng không có Ingress controller nào trong cluster thì sao?', options: ['Kubernetes tự cài nginx', 'Ingress được lưu nhưng không có gì xử lý — không truy cập được', 'API server từ chối', 'Service tự đổi thành NodePort'], answer: 1, explain: 'Ingress chỉ là cấu hình, cần controller. Lab mô phỏng ingress-nginx lịch sử; cluster mới dùng controller đang được duy trì hoặc Gateway API.' },
       { q: 'Vì sao cần <code>rewrite-target</code> khi định tuyến <code>/api</code> tới một app?', options: ['Để tăng tốc', 'App chỉ biết đường dẫn của nó (/version), không biết tiền tố /api mà Ingress dùng để phân luồng', 'Để bật HTTPS', 'Bắt buộc với mọi Ingress'], answer: 1, explain: 'Không rewrite, app nhận /api/version và trả 404.' },
       { q: 'HPA hiển thị <code>cpu: &lt;unknown&gt;/50%</code>. Nguyên nhân thường gặp?', options: ['Pod quá nhiều', 'Container thiếu resources.requests.cpu hoặc chưa có metrics-server', 'Ingress lỗi', 'Image sai'], answer: 1, explain: '% CPU = mức dùng thực tế / requests.cpu. Không có requests thì không có mẫu số.' },
       { q: 'CPU trung bình 150%, mục tiêu 50%, đang có 2 Pod. HPA muốn bao nhiêu Pod?', options: ['2', '3', '6', '150'], answer: 2, explain: 'desired = ceil(2 × 150/50) = 6 (bị giới hạn bởi maxReplicas).' },
@@ -144,7 +144,8 @@ spec:
     ],
     render(root, ctx) {
       const theory = `
-        <h2>Ingress: một cổng vào, nhiều ứng dụng</h2>
+        <h2>Ingress: mô phỏng lịch sử, một cổng vào nhiều ứng dụng</h2>
+        <div class="callout warn"><strong>Phạm vi:</strong> Ingress NGINX đã ngừng bảo trì tháng 3/2026. Lab giữ annotation để minh họa hành vi lịch sử; annotation phụ thuộc controller. Không dùng hướng dẫn lab này để cài ingress-nginx mới trên máy thật.</div>
         <p><b>Ingress</b> là bộ quy tắc HTTP: "request có Host <code>shop.local</code> và đường dẫn <code>/api</code> thì gửi tới Service <code>api</code>". Quy tắc được thực thi bởi một <b>Ingress controller</b> — thực chất là một nginx (hoặc Traefik...) chạy trong cluster, lắng nghe cổng 80/443.</p>
         <pre class="code"><code>                      ┌─ Host: shop.local, /      ─▶ Service shop ─▶ Pod shop ×2
 curl ─▶ :80 ingress ──┤
@@ -172,7 +173,8 @@ spec:
         name: cpu
         target: { type: Utilization, averageUtilization: 50 }</code></pre>
         <details><summary>🖥 Chạy trên máy thật</summary>
-          <p>Với kind, tạo cluster có ánh xạ cổng 80 (<code>extraPortMappings</code> trên node control-plane, kèm nhãn <code>ingress-ready=true</code>), rồi cài controller: <code>kubectl apply -f https://kind.sigs.k8s.io/examples/ingress/deploy-ingress-nginx.yaml</code>. Thêm <code>127.0.0.1 shop.local</code> vào file hosts. HPA cần metrics-server: cài từ <code>github.com/kubernetes-sigs/metrics-server</code> và thêm cờ <code>--kubelet-insecure-tls</code> trên kind.</p>
+          <p>Dùng cluster cục bộ và làm theo <a href="https://gateway.envoyproxy.io/docs/tasks/quickstart/" target="_blank" rel="noopener noreferrer">Envoy Gateway Quickstart</a>: cài controller cùng các định nghĩa tài nguyên tùy chỉnh (CRD) Gateway API tương thích; tạo GatewayClass, Gateway và HTTPRoute trỏ tới Service. Kiểm tra trạng thái <code>Accepted</code>, <code>ResolvedRefs</code> và thử request qua địa chỉ/port-forward của Gateway với Host đúng. Chuyển quy tắc rewrite bằng bộ lọc HTTPRoute được controller hỗ trợ, không sao chép annotation nginx. Xem thêm <a href="https://gateway-api.sigs.k8s.io/guides/getting-started/simple-gateway/" target="_blank" rel="noopener noreferrer">Gateway đơn giản</a>. Terminal giả lập bài này không thực thi Gateway API.</p>
+          <p>HPA trên máy thật cần metrics-server được cấu hình phù hợp cluster và <code>requests.cpu</code>. Theo hướng dẫn metrics-server của môi trường; không tắt kiểm tra chứng chỉ mặc định cho hệ thống thật.</p>
         </details>
         <details><summary>⚠ Lỗi thường gặp</summary>
           <ul>
@@ -192,7 +194,7 @@ spec:
         editFiles: ['apps.yaml', 'ingress.yaml'],
         cvHeight: 400,
         height: 300,
-        welcome: ['Có sẵn apps.yaml (shop + api) và ingress.yaml. Ingress controller nginx đã được cài trong cluster.', 'Thử: kubectl apply -f apps.yaml → kubectl apply -f ingress.yaml → curl shop.local/'],
+        welcome: ['Mô phỏng lịch sử: có apps.yaml và ingress.yaml, controller nginx giả lập. Máy thật mới dùng Gateway API/controller hiện hành.', 'Thử: kubectl apply -f apps.yaml → kubectl apply -f ingress.yaml → curl shop.local/'],
         chips: ['kubectl apply -f apps.yaml', 'kubectl apply -f ingress.yaml', 'kubectl get ingress', 'curl shop.local/', 'curl shop.local/api/version', 'kubectl set resources deployment api --requests=cpu=100m', 'kubectl autoscale deployment api --cpu-percent=50 --min=1 --max=5', 'kubectl get hpa,pods'],
       });
       App.labUI(s.lab, lesson, ctx);

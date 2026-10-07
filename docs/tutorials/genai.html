@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Thực hành AI tạo sinh — Visual Lab</title><link rel="stylesheet" href="../../css/style.css"><link rel="stylesheet" href="tutorial.css"></head>
+<body><main><a href="../../index.html#/genai/genai-rag">← Về bài RAG</a><h1>Hỏi đáp có nguồn trên máy</h1>
+<p>Đường cơ bản cần Python 3.9 trở lên, chỉ dùng thư viện chuẩn và không gọi mạng. Tại thư mục gốc dự án, chạy <a href="../../examples/genai/rag.py">chương trình</a> cùng <a href="../../examples/genai/policies.json">chính sách tiếng Việt mẫu</a>. Các chính sách là dữ liệu minh họa.</p>
+<h2>Chạy và kiểm chứng</h2><pre>python examples/genai/rag.py --question "Đổi trả sản phẩm trong bao lâu?"
+python examples/genai/rag.py --question "Lãi suất vay ngân hàng?"
+python examples/genai/rag.py --question "DOI TRA SAN PHAM?" --top-k 1
+python -m unittest discover -s examples/tests -v</pre>
+<p>Câu đầu trả <code>answered: true</code>, nguyên văn chính sách 7 ngày cùng điều kiện hóa đơn/chưa sử dụng và nguồn <code>chinh-sach/doi-tra</code>. Câu thứ hai trả <code>answered: false</code> và nguồn rỗng. Chương trình chuẩn hóa chữ hoa/dấu, bỏ một số từ phổ biến, yêu cầu tối thiểu hai từ khớp và tỷ lệ từ truy vấn khớp từ 0.5. Mỗi mục JSON là một đoạn có sẵn; chương trình không tự chia đoạn.</p>
+<p>Đây là phần truy xuất/trích xuất minh họa đường đi của RAG (Retrieval-Augmented Generation: sinh tăng cường truy xuất), chưa có bước sinh bằng mô hình ngôn ngữ. Điểm từ khóa không xác nhận chứng cứ đủ trả lời câu có phủ định hay điều kiện khác. Không có embedding học được, xếp hạng lại, quyền đọc, nhận dạng chỉ dẫn độc hại hay kiểm chứng nghiệp vụ.</p>
+<h2>Lỗi thường gặp</h2><ul><li>Không tìm thấy file: chạy tại gốc dự án, hoặc truyền <code>--documents đường/dẫn/file.json</code>. JSON cần danh sách không rỗng, mỗi mục có <code>title, source, text</code> là chuỗi không rỗng.</li><li>Câu hỏi rỗng hoặc <code>--top-k 0</code>: lệnh dừng với mã lỗi 2. Từ đồng nghĩa không khớp: mở rộng dữ liệu hoặc dùng truy xuất ngữ nghĩa thật; không hạ ngưỡng để ép mọi câu có câu trả lời.</li></ul>
+<h2>Tùy chọn: sinh văn bản bằng mô hình thật</h2><p>Dùng môi trường <strong>Python 3.10 trở lên riêng</strong>; tài liệu Transformers hiện kiểm tra với PyTorch 2.5 trở lên. Không chạy phần này trong bộ kiểm thử cơ bản. Qwen2.5-0.5B-Instruct có khoảng 0.49 tỷ tham số, dùng để thử cơ chế. Lần đầu cần mạng để tải trọng số, RAM và đĩa cho framework/mô hình; CPU có thể chậm, không bảo đảm chất lượng tiếng Việt.</p>
+<pre># PowerShell; cần cài Python 3.10 trước
+py -3.10 -m venv .venv-genai
+.\.venv-genai\Scripts\python.exe -m pip install "torch&gt;=2.5" "transformers&gt;=4.37"
+# Lưu đoạn Python bên dưới thành thu_model.py, rồi chạy:
+.\.venv-genai\Scripts\python.exe thu_model.py</pre>
+<pre>import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
+name = "Qwen/Qwen2.5-0.5B-Instruct"
+tokenizer = AutoTokenizer.from_pretrained(name)
+model = AutoModelForCausalLM.from_pretrained(name).to("cpu").eval()
+messages = [{"role": "user", "content": "Giải thích ngắn khái niệm RAG."}]
+inputs = tokenizer.apply_chat_template(
+    messages, tokenize=True, add_generation_prompt=True,
+    return_dict=True, return_tensors="pt")
+with torch.no_grad():
+    outputs = model.generate(**inputs, max_new_tokens=80, do_sample=False)
+new_tokens = outputs[0][inputs["input_ids"].shape[-1]:]
+print(tokenizer.decode(new_tokens, skip_special_tokens=True))</pre>
+<p>Đoạn mã dùng mẫu hội thoại và chỉ giải mã token mới sinh, chưa kết nối kho chính sách. Khi ghép RAG thật, phải giữ nguồn, kiểm chứng từng nhận định và từ chối khi tài liệu thiếu. Phần tải/chạy mô hình thật chưa được kiểm thử trong dự án.</p>
+<h2>Nguồn chính thức</h2><p><a href="https://huggingface.co/learn/cookbook/en/advanced_rag">RAG nâng cao</a>, <a href="https://huggingface.co/learn/cookbook/en/rag_evaluation">đánh giá RAG</a>, <a href="https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct">model card Qwen</a> và <a href="https://huggingface.co/docs/transformers/installation">cài Transformers</a>. Model card cảnh báo Transformers trước 4.37 không hỗ trợ qwen2; phiên bản thực tế cần tương thích với Python/framework. Đối chiếu 07/10/2026.</p>
+</main></body></html>

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Thực hành học máy — Visual Lab</title><link rel="stylesheet" href="../../css/style.css"><link rel="stylesheet" href="tutorial.css"></head>
+<body><main><a href="../../index.html#/ai/ai-data">← Về bài dữ liệu</a><h1>Học máy: chia tập, chuẩn hóa, chọn và đánh giá</h1>
+<p>Điều kiện: Python 3.9 trở lên, không cần cài thư viện. Mở cửa sổ lệnh tại thư mục gốc dự án. <a href="../../examples/ml/workflow.py">Chương trình</a> đọc <a href="../../examples/ml/study_scores.csv">30 mẫu giờ học/điểm tổng hợp</a>; dữ liệu này không mô tả người thật hay chứng minh học thêm sẽ làm tăng điểm.</p>
+<h2>Chạy và đọc kết quả</h2><pre>python examples/ml/workflow.py
+python examples/ml/workflow.py --seed 8
+python -m unittest discover -s examples/tests -v</pre>
+<ol><li>Chia ngẫu nhiên theo seed (giá trị khởi tạo): train (huấn luyện) 18 mẫu, validation (lựa chọn) 6 mẫu, test (đánh giá cuối) 6 mẫu. Các mẫu không xuất hiện đồng thời trong nhiều tập.</li>
+<li>Scaler (phép chuẩn hóa) học trung bình và độ lệch chuẩn trên train; dùng nguyên thống kê đó cho validation và test. Cột hằng dùng hệ số 1.</li>
+<li>Học hồi quy tuyến tính một đặc trưng bằng công thức đóng. Với z là giờ học đã chuẩn hóa, dự đoán là intercept + slope × z. So sánh alpha 0, 1, 10 bằng lỗi validation; alpha phạt hệ số slope, không phạt intercept.</li>
+<li>Giữ mô hình đã học trên train với alpha đã chọn, rồi mới đo test một lần. MSE (Mean Squared Error: lỗi bình phương trung bình) là trung bình (điểm thật − điểm dự đoán)², có đơn vị điểm bình phương.</li></ol>
+<p>Kết quả mong đợi: ba tập 18/6/6, <code>selection</code> có cấu hình và MSE validation của từng ứng viên, <code>test_mse</code> là số hữu hạn. Seed 7 chọn alpha 0. Đổi seed có thể đổi số đo; không dùng số test để chọn seed hay alpha.</p>
+<h2>Lỗi thường gặp và giới hạn</h2><ul><li>Không tìm thấy file: chạy từ thư mục gốc hoặc truyền <code>--data đường/dẫn/file.csv</code>. File phải dùng UTF-8 và hai cột <code>gio_hoc,diem</code>, giá trị số hữu hạn.</li><li>Tập rỗng hoặc tỷ lệ sai: tăng số mẫu, giữ tổng train + validation nhỏ hơn 1. Scaler học trước khi chia sẽ gây rò rỉ.</li><li>Ví dụ dùng mẫu độc lập tổng hợp và một đặc trưng, không có phân loại, mạng nơ-ron hay kiểm định chéo. Dữ liệu theo thời gian/nhóm cần cách chia phù hợp. Sai số nhỏ ở đây chưa chứng minh chất lượng trên dữ liệu thật.</li></ul>
+<h2>Đọc sâu từ nguồn chính thức</h2><p><a href="https://scikit-learn.org/stable/common_pitfalls.html">scikit-learn: tránh rò rỉ</a> giải thích chia trước fit; <a href="https://scikit-learn.org/stable/modules/linear_model.html#ridge-regression-and-classification">hồi quy Ridge</a> giải thích phạt hệ số; <a href="https://scikit-learn.org/stable/modules/model_evaluation.html#mean-squared-error">số đo MSE</a> giải thích đánh giá hồi quy. Đối chiếu 07/10/2026.</p>
+</main></body></html>

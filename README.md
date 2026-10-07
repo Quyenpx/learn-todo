@@ -1,60 +1,63 @@
-# Visual Lab: học AI và DevOps trực quan
+# Visual Lab: học AI, DevOps và AI tạo sinh
 
-Đây là ứng dụng web tĩnh gồm **2 khóa học**. Mỗi khóa có menu và tiến độ riêng, chuyển qua lại bằng nút ở thanh bên:
+Ứng dụng web tĩnh tiếng Việt với **3 khóa**, mô phỏng tương tác, nhiệm vụ tự chấm, trắc nghiệm và thư viện nguồn chính thức. Mỗi khóa có tiến độ riêng, lưu trong trình duyệt; chuyển khóa bằng thanh bên.
 
-- **AI / ML**: học Machine Learning và Deep Learning qua mô phỏng tương tác.
-- **DevOps**: học Docker và Kubernetes bằng **terminal giả lập** chạy ngay trên trình duyệt, kèm sơ đồ động và lab tự chấm.
+| Khóa | Số bài chuyên môn | Nội dung |
+|---|---|---|
+| AI / ML (trí tuệ nhân tạo / học máy) | 7 + bài tổng kết | Gradient, overfit, K-Means, nơ-ron, mạng nơ-ron, dữ liệu/tiền xử lý, đánh giá |
+| DevOps (phát triển và vận hành) | 12 + dự án tổng kết | Docker, Dockerfile, Compose; Kubernetes, Deployment/Service, cấu hình, Ingress lịch sử/HPA, lưu trữ, Helm/quyền, phục vụ mô hình; pipeline và quan sát |
+| AI tạo sinh | 10, gồm tổng kết | Nền tảng, câu lệnh, Transformer, biểu diễn văn bản, RAG, công cụ, đánh giá/bảo mật, tinh chỉnh, đa phương thức/vận hành, trợ lý chính sách |
 
-## Cách chạy
+Trang chủ và thư viện không tính vào số bài. RAG là Retrieval-Augmented Generation (sinh tăng cường truy xuất); HPA là Horizontal Pod Autoscaler (bộ tự co giãn ngang).
 
-Nhấp đúp vào file `index.html`, hoặc chạy máy chủ cục bộ:
+## Mở ứng dụng
+
+Nhấp đúp `index.html`, hoặc mở cửa sổ PowerShell tại gốc dự án:
 
 ```powershell
-python -m http.server 5500
-# rồi mở http://localhost:5500
+python -m http.server 5500 --bind 127.0.0.1
+# Mở http://127.0.0.1:5500; Ctrl+C để dừng
 ```
 
-## Nội dung
+Không cần cài phụ thuộc để dùng web. Đường dẫn ví dụ: `#/ai/ai-data`, `#/devops/dockerfile`, `#/genai/genai-rag`. Đường dẫn cũ như `#/gradient` vẫn được hỗ trợ. Tiến độ cũ vẫn dùng khóa `mlviz-progress-v1`; xóa tiến độ một khóa không ảnh hưởng khóa khác.
 
-| Khóa | Bài | Chủ đề |
-|---|---|---|
-| AI | 1–5 + tổng kết | Gradient Descent, Overfitting, K-Means, Nơ-ron & Backprop, Mạng nơ-ron |
-| DevOps | D1 | Docker cơ bản: image, container, cổng, log, exec |
-| DevOps | D2 | Dockerfile & build: cache theo lớp, .dockerignore, image slim, multi-stage |
-| DevOps | D3 | Compose, volume, network |
-| DevOps | K1 | Kubernetes & Pod: cluster, node, kubectl, đọc Events |
-| DevOps | K2 | Deployment & Service: tự phục hồi, chia tải, rolling update, rollback |
-| DevOps | K3 | ConfigMap, Secret, readinessProbe, giới hạn tài nguyên (OOMKilled) |
-| DevOps | K4 | Ingress (domain, path, rewrite-target) và HPA tự co giãn |
-| DevOps | K5 | StatefulSet & lưu trữ: PVC, PV, StorageClass, headless Service, danh tính ổn định |
-| DevOps | K6 | Helm (chart, values, upgrade, rollback, kho chart) và RBAC (Role, RoleBinding, `auth can-i`) |
-| DevOps | K7 | Đưa model ML lên K8s: Job huấn luyện, startupProbe, canary, HPA |
-| DevOps | Tổng kết | Dự án: sửa 5 lỗi trong manifest, đưa web + Redis lên namespace prod |
+## Thực hành trên máy
 
-Đường dẫn có dạng `#/<khóa>/<bài>`, ví dụ `#/devops/dockerfile`. Đường dẫn cũ dạng `#/gradient` được tự chuyển sang dạng mới.
+Ba hướng dẫn đọc được trực tiếp hoặc từ nhóm “Thực hành trong dự án” trong thư viện:
 
-## Cấu trúc thư mục
+- [Học máy](docs/tutorials/ml.html): Python 3.9+, chia train/validation/test, scaler chỉ fit train, chọn hồi quy bằng validation và đánh giá test cuối.
+- [AI tạo sinh](docs/tutorials/genai.html): Python 3.9+, truy xuất từ khóa tiếng Việt, trích đoạn có nguồn, từ chối khi thiếu chứng cứ. Hướng mô hình thật dùng môi trường Python 3.10+ riêng, cần mạng/RAM/đĩa; chưa kiểm thử tải/chạy mô hình.
+- [DevOps](docs/tutorials/devops.html): Docker/Compose đóng gói chính web này; Kubernetes tùy chọn cần cluster thử riêng và image sẵn trên node. Có lệnh kiểm tra, chạy và dừng tài nguyên.
 
+```powershell
+python examples/ml/workflow.py
+python examples/genai/rag.py --question "Đổi trả sản phẩm trong bao lâu?"
+docker compose -p visual-lab-practice -f examples/devops/compose.yaml config
+docker compose -p visual-lab-practice -f examples/devops/compose.yaml up --build -d
+# Mở http://127.0.0.1:8080; dừng đúng dự án vừa tạo:
+docker compose -p visual-lab-practice -f examples/devops/compose.yaml down
 ```
-index.html
-css/style.css              Hệ thống thiết kế chung
-css/devops.css             Giao diện khóa DevOps, terminal, trình sửa file
-js/ml-math.js              Lõi toán ML
-js/core.js                 Router, 2 khóa học, tiến độ, lab, trắc nghiệm
-js/ui-devops.js            Terminal, trình sửa file, sơ đồ Docker và cluster Kubernetes
-js/devops/                 Lõi mô phỏng (không đụng DOM, kiểm thử bằng Node)
-  yaml-lite.js, shell.js, docker-registry.js, docker-build.js, docker-engine.js
-  helm.js                  Helm 3: Go template (if/range/with/include, pipe), values, kho chart vlab
-  k8s-engine.js            kubectl, controller (Deployment, StatefulSet, Job, HPA), PVC/PV, RBAC, Ingress
-js/lessons/*.js            Bài khóa AI
-js/lessons/devops/*.js     Bài khóa DevOps
-tests/                     Kiểm thử
-```
+
+Docker cần Engine/Desktop đang chạy; build lần đầu cần tải base image. Web và ví dụ cơ bản không gọi mô hình hoặc dịch vụ trả phí.
 
 ## Kiểm thử
 
+Cần Node.js có trình chạy kiểm thử tích hợp và Python 3.9+. Trên Windows, dùng mảng tên file thay cho wildcard hoặc truyền cả thư mục:
+
 ```powershell
-node --test tests/ml-math.test.js tests/devops-sim.test.js tests/devops-labs.test.js tests/k8s-sim.test.js tests/k8s-labs.test.js tests/k8s-phase3.test.js tests/k8s-labs-phase3.test.js
+$taskTests = @(Get-ChildItem -LiteralPath tests -Filter '*.test.js' | ForEach-Object { $_.FullName })
+node --test @taskTests
+python -m unittest discover -s examples/tests -v
 ```
 
-Trên Windows, truyền cả thư mục (`node --test tests/`) sẽ lỗi, nên cần liệt kê từng file.
+Bộ Node kiểm tra lõi mô phỏng, nội dung, lab, chia validation/test và tích hợp ba khóa. Bộ Python kiểm tra truy xuất/từ chối/input, chia tập, scaler train, hồi quy, lựa chọn validation, số đo và chạy chương trình thực.
+
+## Phạm vi và cấu trúc
+
+- `js/core.js`, `js/lessons/`: điều hướng, tiến độ và bài học; `js/lessons/genai/` chứa khóa mới.
+- `js/devops/`, `js/ml-math.js`, `js/learning/`: phép tính và terminal mô phỏng; `js/content/legacy.js` chứa nội dung bổ sung.
+- `css/`: giao diện chung; `tests/`: kiểm thử Node; `examples/`: Python, dữ liệu tổng hợp và manifest; `docs/tutorials/`: hướng dẫn máy thật.
+
+Terminal DevOps trên trình duyệt chỉ mô phỏng lệnh trong phạm vi bài, không chạy Docker hay Kubernetes thật. Mô phỏng AI tạo sinh dùng phép tính/từ khóa, không có tokenizer chính xác, embedding học được, huấn luyện hay mô hình ngôn ngữ chạy trong trình duyệt. Dữ liệu và số đo mẫu không đại diện chất lượng sản xuất. Test của bài overfit chỉ mở sau thao tác đánh giá cuối; quyết định chọn cấu hình dùng validation. Lab Ingress giữ cơ chế lịch sử; môi trường mới nên theo nguồn Gateway API/controller hiện hành.
+
+Ứng dụng không có backend, tài khoản hay nơi nhập khóa truy cập dịch vụ. Máy chủ Python trong hướng dẫn phục vụ học cục bộ; chưa có cấu hình triển khai công khai hoặc kiểm thử cluster thật. Người dùng tự quản lý Git và đẩy mã sau khi xem thay đổi.

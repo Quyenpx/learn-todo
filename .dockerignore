@@ -1,0 +1,15 @@
+# Giới hạn ngữ cảnh build; vẫn giữ hướng dẫn và ví dụ người học tải.
+.git
+.agents
+.codex
+.aws
+.superpowers
+node_modules
+**/__pycache__
+**/*.pyc
+**/.venv*
+**/venv
+*.log
+tests
+examples/tests
+docs/superpowers

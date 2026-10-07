@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Thực hành DevOps — Visual Lab</title><link rel="stylesheet" href="../../css/style.css"><link rel="stylesheet" href="tutorial.css"></head>
+<body><main><a href="../../index.html#/devops/dockerfile">← Về bài Dockerfile</a><h1>Đóng gói chính Visual Lab</h1>
+<p>Cần Docker Engine/Desktop đang chạy và Docker Compose. Đây là web tĩnh phục vụ bằng <code>python -m http.server</code> cho thực hành cục bộ. <a href="../../examples/devops/Dockerfile">Dockerfile</a> chạy người dùng không có quyền quản trị, cổng 8080; copy cả ví dụ và hướng dẫn để liên kết không bị thiếu. Không có backend hay tài khoản; máy chủ này không dành cho triển khai công khai.</p>
+<h2>Build, chạy và dừng</h2><pre># Chạy tại thư mục gốc; -p đặt tên dự án thực hành riêng
+docker compose -p visual-lab-practice -f examples/devops/compose.yaml config
+docker compose -p visual-lab-practice -f examples/devops/compose.yaml up --build -d
+docker compose -p visual-lab-practice -f examples/devops/compose.yaml ps
+docker compose -p visual-lab-practice -f examples/devops/compose.yaml logs web
+# Sau khi thực hành, chỉ dừng dự án vừa tạo
+docker compose -p visual-lab-practice -f examples/devops/compose.yaml down</pre>
+<p>Mở <a href="http://127.0.0.1:8080">http://127.0.0.1:8080</a>; kiểm tra ba khóa, hướng dẫn trong thư viện và các file tải. Kết quả mong đợi: web phản hồi, container chuyển sang healthy sau kiểm tra sức khỏe. Compose giới hạn bộ nhớ/CPU, chỉ công bố cổng trên máy cục bộ; không dùng volume. <code>down</code> dọn container/network của dự án, vẫn giữ image đã build. Base image có tag phiên bản nhưng tag có thể thay đổi; khi triển khai cần chọn digest và quy trình cập nhật riêng.</p>
+<h2>Kubernetes tùy chọn, chỉ trên cluster thử riêng</h2><p>Cần kubectl, cluster thử đã chọn đúng context và image <code>visual-lab-local:1</code> đã nạp vào mọi node; hoặc sửa image thành địa chỉ kho riêng mà cluster kéo được. Manifest có Deployment/Service, probe, tài nguyên và quyền tối thiểu. Chưa chạy kiểm thử cluster trong dự án.</p>
+<pre>kubectl config current-context
+# Chỉ tiếp tục khi xác nhận đây là cluster thử riêng
+kubectl create namespace visual-lab-practice
+kubectl apply -f examples/devops/kubernetes.yaml
+kubectl -n visual-lab-practice rollout status deployment/visual-lab
+kubectl -n visual-lab-practice port-forward service/visual-lab 8081:8080
+# Mở http://127.0.0.1:8081; Ctrl+C để dừng port-forward
+kubectl delete -f examples/devops/kubernetes.yaml
+# Chỉ xóa namespace nếu chính bạn vừa tạo và không chứa tài nguyên khác
+kubectl delete namespace visual-lab-practice</pre>
+<h2>Lỗi thường gặp và giới hạn</h2><ul><li>Docker không kết nối: khởi động Engine/Desktop. Build lần đầu cần mạng tải base image; không cần mô hình hay phụ thuộc máy học.</li><li>Cổng 8080 đang dùng: sửa cổng máy chủ trong <a href="../../examples/devops/compose.yaml">compose.yaml</a>, giữ cổng container 8080. Build context phải là gốc dự án.</li><li>ImagePullBackOff: image cục bộ chưa có trên node hoặc kho cần quyền kéo. Running nhưng chưa READY: kiểm tra describe/logs/probe/cổng.</li><li>Lab trình duyệt là terminal mô phỏng; các lệnh Docker/kubectl trên trang này chạy trên máy thật. Manifest không có Gateway, bộ tự co giãn hay hệ thống quan sát. Không triển khai vào cluster đang dùng cho công việc.</li></ul>
+<h2>Nguồn chính thức</h2><p><a href="https://docs.docker.com/build/building/best-practices/">Docker: build</a>, <a href="https://docs.docker.com/reference/compose-file/build/">Compose: build context</a>, <a href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/">Kubernetes: Deployment</a> và <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/">probe</a>. Đối chiếu 07/10/2026.</p>
+</main></body></html>

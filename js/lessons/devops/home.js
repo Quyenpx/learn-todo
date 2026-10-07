@@ -1,6 +1,6 @@
 /*
  * Trang chủ khóa DevOps: giới thiệu hành trình Code → Image → Container → Compose → Kubernetes,
- * lộ trình 10 bài (bài chưa phát hành hiện "Sắp ra mắt") và hướng dẫn cài môi trường thật.
+ * lộ trình theo các bài đã đăng ký và hướng dẫn cài môi trường thật.
  */
 (function () {
   'use strict';
@@ -16,6 +16,8 @@
     { id: 'k8s-stateful', icon: '🗄️', title: 'StatefulSet & lưu trữ', text: 'PersistentVolume, chạy cơ sở dữ liệu trên Kubernetes.' },
     { id: 'k8s-helm', icon: '⛵', title: 'Helm & RBAC', text: 'Đóng gói ứng dụng thành chart, phân quyền truy cập cluster.' },
     { id: 'k8s-ml', icon: '🤖', title: 'Đưa model ML lên K8s', text: 'Đóng gói model, phục vụ API dự đoán và co giãn theo lưu lượng.' },
+    { id: 'devops-cicd', icon: '◈', title: 'CI/CD và rollback', text: 'Gate kiểm thử, phê duyệt và khôi phục phiên bản; phân biệt GitOps.' },
+    { id: 'devops-observability', icon: '◈', title: 'Quan sát và xử lý sự cố', text: 'Tỷ lệ lỗi, độ trễ, tài nguyên và quy trình xác nhận khắc phục.' },
     { id: 'devops-final', icon: '🎓', title: 'Dự án tổng kết', text: 'Tự triển khai hệ thống hoàn chỉnh từ code đến cluster.' },
   ];
   // Menu đọc danh sách này mỗi lần vẽ lại: bài chưa có file hiển thị dạng "Sắp ra mắt"
@@ -31,14 +33,15 @@
     navSub: 'Lộ trình Docker → K8s',
     render(root, ctx) {
       const has = (id) => App.lessons.some((l) => l.id === id);
+      const roadmap = App.lessonsOf('devops').filter(l => l.id !== 'devops-home' && l.kind !== 'resources').map(l => ({id:l.id,icon:l.icon,title:l.navTitle,text:l.cardText || (ROADMAP.find(r => r.id === l.id) || {}).text || ''}));
       const pct = Math.round(App.overallProgress('devops') * 100);
-      const first = ROADMAP.find((r) => has(r.id));
+      const first = roadmap.find((r) => has(r.id));
       const el = App.h(`<div class="lesson">
         <section class="hero reveal">
           <div>
             <span class="badge">Thực hành ngay trên trình duyệt — không cần cài gì</span>
             <h1 style="margin-top:14px">Làm chủ <span class="grad-text">Docker</span> và <span class="grad-text">Kubernetes</span> bằng terminal thật sự gõ được</h1>
-            <p class="lead">Mỗi bài có <b>lý thuyết giải thích tận gốc</b>, <b>sơ đồ động</b> vẽ lại theo từng lệnh bạn gõ, <b>terminal giả lập</b> phản hồi giống Docker thật, <b>lab tự chấm</b> và mục <b>"Chạy trên máy thật"</b> để mang kỹ năng ra ngoài.</p>
+            <p class="lead">Học qua <b>lý thuyết ngắn</b>, <b>terminal giả lập</b> hoặc phép tính quy trình, <b>lab tự chấm</b> và thực hành trên máy thật. Mô phỏng chỉ hỗ trợ phạm vi được ghi trong từng bài.</p>
             <div class="hero-cta">
               <a href="${first ? App.url(first.id) : '#/'}" class="btn primary" id="dv-start-btn">${pct > 0 ? 'Tiếp tục học' : 'Bắt đầu bài 1'} →</a>
               <a href="#dv-setup" class="btn" id="dv-setup-btn">🛠 Chuẩn bị máy thật</a>
@@ -61,8 +64,8 @@
         </section>
 
         <section class="reveal">
-          <h2>📚 Lộ trình 10 bài + dự án tổng kết</h2>
-          <div class="cards">${ROADMAP.map((r, i) => {
+          <h2>📚 Lộ trình ${roadmap.filter(r => r.id !== 'devops-final').length} bài chuyên môn + dự án tổng kết</h2>
+          <div class="cards">${roadmap.map((r, i) => {
         const l = App.lessons.find((x) => x.id === r.id);
         if (!l) return `<div class="lesson-card soon"><span class="ic">${r.icon}</span><h3>${r.id === 'devops-final' ? '' : `Bài ${i + 1}. `}${r.title}</h3><p>${r.text}</p><span class="tag-soon">⏳ Sắp ra mắt</span></div>`;
         const p = App.lessonProgress(l);
@@ -73,7 +76,7 @@
 
         <section class="card reveal" id="dv-setup">
           <h2>🛠 Chuẩn bị môi trường thật (khi bạn sẵn sàng)</h2>
-          <p class="muted">Mọi bài đều làm được hoàn toàn trên trình duyệt. Khi muốn chạy thật, cài các công cụ sau — lệnh trong khóa học giống hệt.</p>
+          <p class="muted">Phần mô phỏng làm được trên trình duyệt. Thực hành trên máy thật cần các công cụ sau và tài liệu bổ sung; hỗ trợ lệnh/cờ có thể khác mô phỏng.</p>
           <div class="steps-how">
             <div><b>1. Docker Desktop</b>Windows/macOS: tải tại docker.com, bật WSL 2 trên Windows. Linux: <code>curl -fsSL https://get.docker.com | sh</code></div>
             <div><b>2. Kiểm tra</b><code>docker version</code> rồi <code>docker run hello-world</code> — thấy "Hello from Docker!" là xong.</div>

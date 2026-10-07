@@ -41,9 +41,10 @@
     },
   });
 
-  // ---------- Hai khóa học: AI và DevOps ----------
+  // ---------- Ba khóa học có tiến độ độc lập ----------
   // Bài không khai báo course mặc định thuộc khóa AI (giữ tương thích các bài cũ)
   App.courses = {
+    genai: { id: 'genai', name: 'AI tạo sinh', icon: '✦', title: 'Học AI tạo sinh qua thực hành', home: 'genai-home', sub: 'Từ nguyên lý đến ứng dụng có nguồn' },
     ai: { id: 'ai', name: 'AI / ML', icon: '🧠', home: 'home', sub: 'Học AI bằng cách nhìn thấy', title: 'Học Machine Learning trực quan' },
     devops: { id: 'devops', name: 'DevOps', icon: '🐳', home: 'devops-home', sub: 'Docker & Kubernetes thực chiến', title: 'Học Docker & Kubernetes thực hành' },
   };
@@ -480,7 +481,7 @@
     if (sw) sw.querySelectorAll('button').forEach((b) => { const on = b.dataset.v === course.id; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   }
   App.overallProgress = (course = App.activeCourse) => {
-    const tracked = App.lessonsOf(course).filter((l) => l.labs || l.quiz);
+    const tracked = App.lessonsOf(course).filter((l) => l.kind !== 'resources' && (l.labs || l.quiz));
     return tracked.reduce((s, l) => s + App.lessonProgress(l), 0) / Math.max(1, tracked.length);
   };
 
@@ -528,6 +529,7 @@
       canvas(parent, opts) { const cv = App.canvas(parent, opts); cleanups.push(cv.destroy); return cv; },
     };
     lesson.render(main, ctx);
+    if (App.studyUI) App.studyUI(main, lesson);
     const course = App.courses[App.activeCourse];
     document.title = (lesson.id === course.home ? '' : (lesson.navTitle || lesson.title) + ' · ') + `Visual Lab — ${course.title}`;
     renderNav();
@@ -535,6 +537,7 @@
   }
 
   App.start = function () {
+    if (App.registerResourcePages) App.registerResourcePages();
     window.addEventListener('hashchange', navigate);
     App.on('progress', renderNav);
     document.getElementById('menu-btn').addEventListener('click', () => document.body.classList.toggle('nav-open'));

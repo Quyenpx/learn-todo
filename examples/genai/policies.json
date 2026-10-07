@@ -1,0 +1,6 @@
+[
+  {"title": "Đổi trả", "source": "chinh-sach/doi-tra", "text": "Đổi trả sản phẩm trong 7 ngày kể từ ngày nhận hàng nếu còn hóa đơn và sản phẩm chưa sử dụng."},
+  {"title": "Giao hàng", "source": "chinh-sach/giao-hang", "text": "Giao hàng nội thành trong 2 ngày làm việc. Phí giao hàng là 25000 đồng cho mỗi đơn."},
+  {"title": "Bảo hành", "source": "chinh-sach/bao-hanh", "text": "Bảo hành thiết bị trong 12 tháng với lỗi của nhà sản xuất. Cần cung cấp hóa đơn mua hàng."},
+  {"title": "Hỗ trợ", "source": "chinh-sach/ho-tro", "text": "Hỗ trợ khách hàng từ 8 giờ đến 17 giờ vào thứ hai đến thứ sáu. Yêu cầu được phản hồi trong 1 ngày làm việc."}
+]
