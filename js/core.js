@@ -41,12 +41,14 @@
     },
   });
 
-  // ---------- Ba khóa học có tiến độ độc lập ----------
+  // ---------- Bốn khóa học có tiến độ độc lập ----------
   // Bài không khai báo course mặc định thuộc khóa AI (giữ tương thích các bài cũ)
   App.courses = {
     genai: { id: 'genai', name: 'AI tạo sinh', icon: '✦', title: 'Học AI tạo sinh qua thực hành', home: 'genai-home', sub: 'Từ nguyên lý đến ứng dụng có nguồn' },
     ai: { id: 'ai', name: 'AI / ML', icon: '🧠', home: 'home', sub: 'Học AI bằng cách nhìn thấy', title: 'Học Machine Learning trực quan' },
     devops: { id: 'devops', name: 'DevOps', icon: '🐳', home: 'devops-home', sub: 'Docker & Kubernetes thực chiến', title: 'Học Docker & Kubernetes thực hành' },
+    // Khóa nền tảng cho người mới: học Python trước khi vào ML/DL, tiến độ tách riêng như các khóa khác
+    python: { id: 'python', name: 'Python', icon: '🐍', home: 'python-home', sub: 'Python nền tảng cho ML và DL', title: 'Học Python cho AI' },
   };
   App.courseOf = (l) => (l && l.course) || 'ai';
   App.lessonsOf = (course) => App.lessons.filter((l) => App.courseOf(l) === course);

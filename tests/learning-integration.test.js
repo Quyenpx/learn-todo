@@ -28,7 +28,7 @@ test('thư viện đọc bài mới và supplement, tìm không dấu, lọc kh�
   App.register({id:'old',course:'ai'});
   c.window.LearningContent={supplements:{old:{references:[{title:'Đánh giá',url:'https://example.org/b',topic:'Dữ liệu',note:'Chia tập',checked:'07/10/2026'}]}}};
   App.registerResourcePages();App.registerResourcePages();
-  assert.equal(App.lessons.filter(l=>l.kind==='resources').length,3);
+  assert.equal(App.lessons.filter(l=>l.kind==='resources').length,4);
   assert.equal(App.findReferences('chia tai lieu','genai').length,1);
   assert.equal(App.findReferences('chia tap','ai').length,1);
   assert.equal(App.findReferences('không có tài liệu','all').length,0);
@@ -103,4 +103,22 @@ test('thư viện mở hướng dẫn nội bộ riêng và lọc cùng khóa h�
   assert.equal(all(internal).find(n=>n.tagName==='a').href,'docs/tutorials/ml.html');
   search.value='không tồn tại';search.listeners.input();
   assert.equal(all(internal).filter(n=>n.tagName==='a').length,0);
+  // Khóa Python có hướng dẫn cài đặt riêng
+  search.value='';search.listeners.input();filter.value='python';filter.listeners.change();
+  assert.equal(all(internal).find(n=>n.tagName==='a').href,'docs/tutorials/python.html');
+  assert.ok(fs.existsSync('docs/tutorials/python.html'));
+});
+
+test('phần thực hành hiện đủ danh sách link tải (notebook bài tập và lời giải)', () => {
+  const c=boot(),App=c.App;
+  class Element {
+    constructor(tag){this.tagName=tag;this.children=[];this.attrs={};this.textContent='';}
+    appendChild(child){this.children.push(child);return child;}
+    setAttribute(k,v){this.attrs[k]=v;}
+  }
+  c.document={createElement:tag=>new Element(tag)};
+  const root=new Element('div');
+  App.studyUI(root,{id:'py-x',experiment:{},study:{practice:{title:'T',goal:'G',steps:['a'],expected:'E',troubleshooting:['x'],downloads:[{label:'Bài tập',href:'a.ipynb'},{label:'Lời giải',href:'b.ipynb'}]}}});
+  const all=n=>[n,...n.children.flatMap(all)];
+  assert.deepEqual(all(root).filter(n=>n.tagName==='a').map(n=>[n.textContent,n.href]),[['Bài tập','a.ipynb'],['Lời giải','b.ipynb']]);
 });

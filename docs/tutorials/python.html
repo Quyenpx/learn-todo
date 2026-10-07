@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Python cho AI: cài đặt và chạy notebook — Visual Lab</title><meta name="description" content="Hướng dẫn cài Python, môi trường ảo, Jupyter và thư viện NumPy, pandas, scikit-learn, PyTorch để làm 15 notebook bài tập khóa Python cho AI."><link rel="stylesheet" href="../../css/style.css"><link rel="stylesheet" href="tutorial.css"></head>
+<body><main><a href="../../index.html#/python/python-home">← Về khóa Python cho AI</a><h1>Cài đặt Python và chạy notebook bài tập</h1>
+<p>Mỗi bài trong khóa có mô phỏng chạy từng dòng trên trình duyệt (viết bằng JavaScript, không phải Python thật) và một notebook để bạn chạy Python thật trên máy. Notebook bài tập nằm trong <a href="../../examples/python/notebooks/">examples/python/notebooks</a>, bản lời giải trong <a href="../../examples/python/solutions/">examples/python/solutions</a>.</p>
+<h2>1. Cài Python và môi trường ảo</h2>
+<p>Cài Python 3.9 trở lên từ <a href="https://www.python.org/downloads/">python.org</a> (Windows: tích chọn “Add python.exe to PATH”). Môi trường ảo (virtual environment) giữ thư viện của dự án tách khỏi hệ thống. Tại thư mục gốc dự án:</p>
+<pre># Windows PowerShell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+# macOS / Linux
+python3 -m venv .venv
+source .venv/bin/activate
+
+python --version</pre>
+<h2>2. Cài thư viện và Jupyter</h2>
+<p>Bài 1–9 chỉ cần Python chuẩn và Jupyter. Bài 10–15 cần NumPy, pandas, matplotlib, scikit-learn và PyTorch.</p>
+<pre>pip install -r examples/python/requirements.txt
+python -c "import numpy, pandas, sklearn, torch; print('Đủ thư viện')"</pre>
+<p>Nếu cài <code>torch</code> chậm hoặc lỗi, làm theo lệnh dành cho máy của bạn trên <a href="https://pytorch.org/get-started/locally/">pytorch.org</a> (chọn bản CPU là đủ cho khóa học), rồi cài các thư viện còn lại.</p>
+<h2>3. Làm notebook</h2>
+<pre>jupyter notebook examples/python</pre>
+<ol><li>Mở <code>notebooks/01_bat_dau.ipynb</code>, chạy từng ô bằng <b>Shift+Enter</b> từ trên xuống.</li><li>Ở ô BÀI TẬP, thay mỗi dòng <code>pass  # TODO</code> bằng mã của bạn.</li><li>Chạy ô kiểm tra. <code>AssertionError</code> kèm gợi ý nghĩa là chưa đúng; sửa rồi chạy lại cả ô bài tập và ô kiểm tra.</li><li>Khi đúng hết, ô cuối in “Hoàn thành bài N”. So sánh cách làm với bản lời giải.</li></ol>
+<p>Nếu dùng VS Code, cài tiện ích Jupyter và chọn trình thông dịch trong <code>.venv</code>. Google Colab cũng mở được các file <code>.ipynb</code> này.</p>
+<h2>4. Kiểm thử cho người phát triển</h2>
+<p>Notebook được sinh từ file nguồn <code>examples/python/src/*.py</code>; không sửa notebook trực tiếp.</p>
+<pre>python examples/python/build_notebooks.py          # sinh lại notebook sau khi sửa file nguồn
+python examples/python/build_notebooks.py --check  # kiểm tra notebook khớp file nguồn
+python -m unittest discover -s examples/python/tests -v</pre>
+<p>Bộ kiểm thử chạy mọi bản lời giải (phải in “Hoàn thành bài N”) và mọi bản bài tập (phải thất bại vì chưa làm). Bài thiếu thư viện được bỏ qua kèm lý do.</p>
+<h2>Lỗi thường gặp</h2><ul><li><code>'python' is not recognized</code>: Python chưa nằm trong PATH; cài lại và tích chọn PATH, hoặc dùng <code>py</code> trên Windows.</li><li>PowerShell chặn <code>Activate.ps1</code>: chạy <code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code> một lần.</li><li><code>ModuleNotFoundError</code> trong notebook: Jupyter đang dùng trình thông dịch khác; chọn kernel của <code>.venv</code> hoặc cài thư viện trong đúng môi trường.</li><li>Biến “không tồn tại” dù đã khai báo: bạn chưa chạy ô định nghĩa; dùng “Run All” sau khi khởi động lại kernel.</li></ul>
+<h2>Nguồn chính thức</h2><p><a href="https://docs.python.org/3/tutorial/">Hướng dẫn Python chính thức</a>, <a href="https://docs.python.org/3/library/venv.html">venv</a>, <a href="https://docs.jupyter.org/en/latest/">Jupyter</a>, <a href="https://numpy.org/doc/stable/user/absolute_beginners.html">NumPy cho người mới</a>, <a href="https://pandas.pydata.org/docs/getting_started/index.html">pandas</a>, <a href="https://scikit-learn.org/stable/getting_started.html">scikit-learn</a>, <a href="https://pytorch.org/tutorials/beginner/basics/intro.html">PyTorch</a>. Đối chiếu 07/10/2026.</p>
+</main></body></html>

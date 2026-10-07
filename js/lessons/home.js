@@ -40,6 +40,12 @@
           </div>
         </section>
 
+        <section class="card reveal" id="python-first">
+          <h2>🐍 Chưa biết Python? Học nền tảng trước</h2>
+          <p class="muted">Các bài ML ở đây giải thích bằng hình, nhưng để tự viết mô hình bạn cần Python, NumPy, pandas, scikit-learn và PyTorch. Khóa <b>Python cho AI</b> có 15 bài từ con số 0, chạy mã từng dòng trên trình duyệt và có notebook bài tập kèm lời giải.</p>
+          <div class="hero-cta"><a class="btn" href="${App.url('python-home')}" id="python-course-btn">Mở khóa Python cho AI →</a></div>
+        </section>
+
         <section class="reveal">
           <h2>📚 Lộ trình ${lessons.filter(l => l.id !== 'final').length} bài chuyên môn và kiểm tra tổng hợp</h2>
           <div class="cards">${lessons.map((l, i) => {

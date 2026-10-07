@@ -1,0 +1,8 @@
+# Thư viện cho notebook khóa "Python cho AI" (bài 10–15). Bài 1–9 chỉ cần Python chuẩn.
+# Đã kiểm thử với Python 3.9; torch có thể cài theo hướng dẫn riêng trên pytorch.org (bản CPU).
+notebook
+numpy>=1.24
+pandas>=2.0
+matplotlib>=3.7
+scikit-learn>=1.3
+torch>=2.0
