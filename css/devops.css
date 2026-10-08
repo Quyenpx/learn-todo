@@ -66,19 +66,21 @@ body[data-course='devops'] .lesson-card:hover { border-color: rgba(45, 212, 191,
 .chips button {
   font-family: var(--mono); font-size: 12px; color: #bae6fd; background: rgba(56, 189, 248, 0.08);
   border: 1px solid rgba(56, 189, 248, 0.22); border-radius: 8px; padding: 4px 9px; cursor: pointer; transition: all 0.18s;
+  /* Lệnh dài xuống dòng trong nút để người học đọc và bấm được trên điện thoại. */
+  min-width: 0; max-width: 100%; overflow-wrap: anywhere; text-align: left;
 }
 .chips button:hover { background: rgba(56, 189, 248, 0.18); transform: translateY(-1px); }
 
 /* ---------- Trình sửa file (Dockerfile, compose.yaml...) ---------- */
 .fed { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); background: rgba(0, 0, 0, 0.35); display: flex; flex-direction: column; }
 .fed-tabs { display: flex; gap: 2px; padding: 6px 6px 0; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid var(--border); overflow-x: auto; }
-.fed-tabs button { font-family: var(--mono); font-size: 12.5px; color: var(--muted); background: none; border: 1px solid transparent; border-bottom: none; border-radius: 8px 8px 0 0; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.fed-tabs button { font-family: var(--mono); font-size: 12.5px; color: var(--muted); background: none; border: 1px solid transparent; border-bottom: none; border-radius: 8px 8px 0 0; padding: 6px 12px; cursor: pointer; white-space: nowrap; flex: 0 0 auto; }
 .fed-tabs button.on { color: var(--text); background: rgba(0, 0, 0, 0.35); border-color: var(--border); }
 .fed-tabs .dirty::after { content: ' ●'; color: var(--yellow); }
-.fed-body { position: relative; display: grid; grid-template-columns: auto 1fr; font-family: var(--mono); font-size: 13px; line-height: 1.6; max-height: 340px; overflow: auto; }
+.fed-body { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); font-family: var(--mono); font-size: 13px; line-height: 1.6; max-height: 340px; overflow: auto; }
 .fed-gutter { padding: 10px 8px 10px 12px; text-align: right; color: #475569; user-select: none; white-space: pre; }
 .fed-gutter .bad { color: #fca5a5; background: rgba(248, 113, 113, 0.18); border-radius: 4px; }
-.fed-area { width: 100%; min-height: 220px; resize: none; border: none; outline: none; background: none; color: #e2e8f0; font: inherit; line-height: inherit; padding: 10px 12px; white-space: pre; overflow: hidden; tab-size: 2; }
+.fed-area { width: 100%; min-width: 0; min-height: 220px; resize: none; border: none; outline: none; background: none; color: #e2e8f0; font: inherit; line-height: inherit; padding: 10px 12px; white-space: pre; overflow: auto; tab-size: 2; }
 .fed-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); flex-wrap: wrap; }
 
 /* ---------- Khung mô phỏng của bài DevOps ---------- */
@@ -88,6 +90,8 @@ body[data-course='devops'] .lesson-card:hover { border-color: rgba(45, 212, 191,
 .dv-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); }
 .dv-legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
 .dv-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+/* Cột được phép co lại; tab và mã dài cuộn trong khung riêng thay vì giãn cả trang. */
+.dv-split > * { min-width: 0; }
 @media (min-width: 1800px) { .dv-split { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); } }
 .theory .kbd, .theory code { font-family: var(--mono); font-size: 0.88em; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.18); color: #bae6fd; border-radius: 6px; padding: 1px 6px; }
 .theory pre.code code { background: none; border: none; padding: 0; color: inherit; }
@@ -113,9 +117,14 @@ body[data-course='devops'] .lesson-card:hover { border-color: rgba(45, 212, 191,
 
 @media (max-width: 900px) {
   .journey { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dv-split { grid-template-columns: 1fr; }
+  .dv-split { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 460px) {
   .journey { grid-template-columns: 1fr; }
   .term { font-size: 12px; }
+  /* Tối ưu kích thước chữ và khoảng đệm nút chuyển khóa học trên màn hình điện thoại hẹp */
+  .course-switch button { font-size: 12px; padding: 7px 4px; gap: 4px; }
+}
+@media (max-width: 340px) {
+  .course-switch button { font-size: 11px; padding: 6px 2px; }
 }

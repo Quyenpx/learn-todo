@@ -9,7 +9,9 @@ body[data-course="genai"] { --accent: #a78bfa; }
 .experiment-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
 .experiment-result { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 450px; overflow: auto; padding: 16px; background: rgba(0,0,0,.2); border-radius: 12px; font-size: 13px; }
 .study-content { display: grid; gap: 24px; margin-top: 24px; }
-.study-content p, .study-content li { line-height: 1.85; }
+/* Ngắt đường dẫn notebook và lệnh dài trong hướng dẫn, giữ nguyên nội dung sao chép. */
+.study-content p, .study-content li { line-height: 1.85; overflow-wrap: anywhere; }
+.study-content ul, .study-content ol { padding-left: 20px; margin: 8px 0; }
 .reference-item { padding: 16px 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
 .reference-item a { color: var(--accent); font-weight: 600; }
 .reference-item p { margin: 8px 0; }

@@ -121,7 +121,8 @@ h3 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; }
 .muted { color: var(--muted); }
 .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 code, .mono { font-family: var(--mono); font-size: 0.9em; }
-:not(pre) > code { background: rgba(255, 255, 255, 0.07); padding: 1px 6px; border-radius: 6px; }
+/* Ngắt từ cho code inline để không đẩy bung chiều rộng trên màn hình nhỏ */
+:not(pre) > code { background: rgba(255, 255, 255, 0.07); padding: 1px 6px; border-radius: 6px; word-break: break-word; overflow-wrap: anywhere; }
 
 /* ---------- Thẻ (card) ---------- */
 .card {
@@ -131,6 +132,9 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
   padding: clamp(18px, 2vw, 28px);
   box-shadow: var(--shadow);
   backdrop-filter: blur(10px);
+  /* Chống tràn ngang trên màn hình điện thoại khi chứa pre/canvas/table */
+  min-width: 0;
+  max-width: 100%;
 }
 .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
 .pill { font-size: 12.5px; padding: 4px 12px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
@@ -147,7 +151,7 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 }
 .lead { font-size: 17px; color: var(--muted); max-width: 820px; }
 
-.lesson-grid { display: grid; grid-template-columns: minmax(300px, 0.85fr) minmax(0, 1.5fr); gap: 24px; align-items: start; }
+.lesson-grid { display: grid; grid-template-columns: minmax(300px, 0.85fr) minmax(0, 1.5fr); gap: 24px; align-items: start; min-width: 0; max-width: 100%; }
 .theory { position: sticky; top: 24px; max-height: calc(100vh - 48px); overflow-y: auto; }
 .theory h2 { margin-bottom: 6px; }
 .theory p, .theory li { color: #cfd5e6; font-size: 15px; }
@@ -169,7 +173,7 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .callout strong { color: var(--text); }
 
 /* ---------- Khu mô phỏng ---------- */
-.sim { display: flex; flex-direction: column; gap: 18px; }
+.sim { display: flex; flex-direction: column; gap: 18px; min-width: 0; max-width: 100%; }
 .sim-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .sim-grid .span-2 { grid-column: span 2; }
 .panel { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
@@ -395,7 +399,7 @@ pre.code {
 .compare { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14.5px; }
 .compare th, .compare td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
 .compare th { color: var(--muted); font-weight: 600; font-size: 13px; }
-.table-scroll { overflow-x: auto; }
+.table-scroll { overflow-x: auto; max-width: 100%; min-width: 0; -webkit-overflow-scrolling: touch; }
 
 .steps-how { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
 .steps-how div { padding: 16px; border-radius: 14px; background: rgba(0, 0, 0, 0.22); border: 1px solid var(--border); font-size: 14px; color: #cbd2e4; }
@@ -428,11 +432,13 @@ pre.code {
 
 /* ---------- Đáp ứng màn hình (responsive) ---------- */
 @media (max-width: 1180px) {
-  .lesson-grid { grid-template-columns: 1fr; }
+  /* Dùng minmax(0, 1fr) để nội dung bên trong không làm bung vỡ layout grid */
+  .lesson-grid { grid-template-columns: minmax(0, 1fr); }
   .theory { position: static; max-height: none; }
 }
 @media (max-width: 900px) {
-  .app { grid-template-columns: 1fr; z-index: auto; }
+  /* Giới hạn min-width bằng 0 để tránh tràn màn hình khi có khối code pre/table */
+  .app { grid-template-columns: minmax(0, 1fr); z-index: auto; }
   body.nav-open { overflow: hidden; }
   .topbar {
     display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 20;
@@ -470,7 +476,14 @@ pre.code {
   .task { grid-template-columns: 1fr; }
 }
 @media (max-width: 460px) {
+  /* Tối ưu khoảng đệm và sắp xếp dọc cho màn hình điện thoại nhỏ */
+  .main { padding: 18px 12px 60px; }
+  .card { padding: 14px 12px; }
   .controls { grid-template-columns: 1fr; }
   .loop { grid-template-columns: 1fr; }
   .btn { padding: 9px 13px; }
+  .hero-cta { flex-direction: column; }
+  .hero-cta .btn { width: 100%; }
+  .lesson-nav { flex-direction: column; gap: 10px; }
+  .lesson-nav .btn { width: 100%; }
 }
